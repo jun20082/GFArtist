@@ -1,9 +1,8 @@
 import { auth } from '@/auth';
 import { NextResponse, after } from 'next/server';
 import { z } from 'zod';
-import { StatusSyncState } from '@/generated/prisma/enums';
-import { prisma } from '@/lib/prisma';
 import { syncResponseStatus } from '@/lib/operating-status';
+import { ResponseNotFoundError, updateResponseStatus } from '@/lib/response-status';
 
 export const maxDuration = 30;
 
@@ -16,15 +15,6 @@ const updateSchema = z
   .refine((value) => Object.keys(value).length > 0, {
     message: 'No fields to update.',
   });
-
-function isRecordNotFound(error: unknown) {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === 'P2025'
-  );
-}
 
 export async function PATCH(
   request: Request,
@@ -41,21 +31,12 @@ export async function PATCH(
 
   try {
     const input = updateSchema.parse(await request.json());
-
-    const { sourceSettings, ...updated } = await prisma.response.update({
-      where: { id },
-      data: {
-        ...input,
-        statusSyncState: StatusSyncState.PENDING,
-        lastStatusSyncError: null,
-      },
-      include: { category: true, sourceSettings: true },
-    });
+    const { response, sourceSettings } = await updateResponseStatus(id, input);
 
     after(async () => {
       try {
-        await syncResponseStatus(userId, updated.id, undefined, {
-          ...updated,
+        await syncResponseStatus(userId, response.id, undefined, {
+          ...response,
           sourceSettings,
         });
       } catch {
@@ -63,9 +44,9 @@ export async function PATCH(
       }
     });
 
-    return NextResponse.json({ response: updated, syncError: null });
+    return NextResponse.json({ response, syncError: null });
   } catch (error) {
-    if (isRecordNotFound(error)) {
+    if (error instanceof ResponseNotFoundError) {
       return NextResponse.json({ error: 'Response not found.' }, { status: 404 });
     }
 

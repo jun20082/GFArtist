@@ -7,13 +7,10 @@ import {
   quoteSheetName,
 } from '@/lib/google-sheets';
 import { getActiveSourceSettings, requiredResponseHeaders } from '@/lib/source-settings';
+import { applyResponseRows } from '@/lib/response-sync';
 
 function asText(value: unknown) {
   return String(value ?? '').trim();
-}
-
-function normalizePhone(value: string) {
-  return value.replace(/\D/g, '');
 }
 
 export async function POST() {
@@ -52,7 +49,8 @@ export async function POST() {
       throw new Error(`Missing response headers: ${missingHeaders.join(', ')}`);
     }
 
-    const responses = rows.slice(1)
+    const responseRows = rows
+      .slice(1)
       .map((row, index) => ({
         name: asText(row[indexes.get('이름') ?? -1]),
         phoneRaw: asText(row[indexes.get('전화번호') ?? -1]),
@@ -63,50 +61,18 @@ export async function POST() {
       }))
       .filter((row) => row.internalResponseId && (row.name || row.phoneRaw));
 
-    await prisma.$transaction(async (tx) => {
-      for (const response of responses) {
-        await tx.response.upsert({
-          where: { internalResponseId: response.internalResponseId },
-          create: {
-            sourceSettingsId: sourceSettings.id,
-            internalResponseId: response.internalResponseId,
-            name: response.name,
-            phoneRaw: response.phoneRaw,
-            phoneNormalized: normalizePhone(response.phoneRaw),
-            gender: response.gender,
-            orderedProduct: response.orderedProduct,
-            sourceRowNumber: response.sourceRowNumber,
-            lastResponseSyncAt: new Date(),
-          },
-          update: {
-            sourceSettingsId: sourceSettings.id,
-            name: response.name,
-            phoneRaw: response.phoneRaw,
-            phoneNormalized: normalizePhone(response.phoneRaw),
-            gender: response.gender,
-            orderedProduct: response.orderedProduct,
-            sourceRowNumber: response.sourceRowNumber,
-            lastResponseSyncAt: new Date(),
-          },
-        });
-      }
+    const processedCount = await applyResponseRows(sourceSettings.id, responseRows);
 
-      await tx.sourceSettings.update({
-        where: { id: sourceSettings.id },
-        data: { lastResponseSyncAt: new Date() },
-      });
-
-      await tx.syncRun.update({
-        where: { id: syncRun.id },
-        data: {
-          success: true,
-          finishedAt: new Date(),
-          processedCount: responses.length,
-        },
-      });
+    await prisma.syncRun.update({
+      where: { id: syncRun.id },
+      data: {
+        success: true,
+        finishedAt: new Date(),
+        processedCount,
+      },
     });
 
-    return NextResponse.json({ ok: true, processedCount: responses.length });
+    return NextResponse.json({ ok: true, processedCount });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Response sync failed.';
     await prisma.syncRun.update({
