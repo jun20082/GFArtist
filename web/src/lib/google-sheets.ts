@@ -1,6 +1,10 @@
 import { google } from 'googleapis';
 import { prisma } from '@/lib/prisma';
 
+type SheetsClient = ReturnType<typeof google.sheets>;
+
+const sheetsClientCache = new Map<string, { fingerprint: string; sheets: SheetsClient }>();
+
 export async function getSheetsClient(userId: string) {
   const account = await prisma.account.findFirst({
     where: {
@@ -20,6 +24,19 @@ export async function getSheetsClient(userId: string) {
     throw new Error('Google OAuth credentials are not configured.');
   }
 
+  const fingerprint = [
+    account.id,
+    account.access_token ?? '',
+    account.refresh_token ?? '',
+    account.expires_at ?? '',
+  ].join('|');
+
+  const cached = sheetsClientCache.get(userId);
+
+  if (cached && cached.fingerprint === fingerprint) {
+    return cached.sheets;
+  }
+
   const oauthClient = new google.auth.OAuth2(clientId, clientSecret);
   oauthClient.setCredentials({
     access_token: account.access_token ?? undefined,
@@ -27,7 +44,10 @@ export async function getSheetsClient(userId: string) {
     expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
   });
 
-  return google.sheets({ version: 'v4', auth: oauthClient });
+  const sheets = google.sheets({ version: 'v4', auth: oauthClient });
+  sheetsClientCache.set(userId, { fingerprint, sheets });
+
+  return sheets;
 }
 
 export { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';

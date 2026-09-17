@@ -33,7 +33,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   session: {
-    strategy: 'database',
+    strategy: 'jwt',
   },
   pages: {
     signIn: '/login',
@@ -42,6 +42,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user }) {
       const email = user.email?.toLowerCase();
       return Boolean(email && getAllowedEmails().has(email));
+    },
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      const userId = typeof token.id === 'string' ? token.id : token.sub;
+
+      if (session.user && userId) {
+        session.user.id = userId;
+      }
+
+      return session;
     },
   },
 });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { getSheetsClient, parseSpreadsheetId, quoteSheetName } from '@/lib/google-sheets';
+import type { SourceSettings } from '@/generated/prisma/client';
+import { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
 
 export const sourceSettingsInput = z.object({
   partyName: z.string().trim().min(1).max(120),
@@ -22,6 +23,7 @@ export async function validateSourceSettings(
   input: z.infer<typeof sourceSettingsInput>,
 ) {
   const spreadsheetId = parseSpreadsheetId(input.spreadsheetUrlOrId);
+  const { getSheetsClient } = await import('@/lib/google-sheets');
   const sheets = await getSheetsClient(userId);
   const metadata = await sheets.spreadsheets.get({
     spreadsheetId,
@@ -56,10 +58,31 @@ export async function validateSourceSettings(
   return { ...input, spreadsheetId };
 }
 
+const ACTIVE_SOURCE_SETTINGS_TTL_MS = 5_000;
+
+let activeSourceSettingsCache: {
+  value: SourceSettings;
+  expiresAt: number;
+} | null = null;
+
+export function invalidateActiveSourceSettingsCache() {
+  activeSourceSettingsCache = null;
+}
+
 export async function getActiveSourceSettings() {
-  return prisma.sourceSettings.findFirst({
+  if (activeSourceSettingsCache && activeSourceSettingsCache.expiresAt > Date.now()) {
+    return activeSourceSettingsCache.value;
+  }
+
+  const value = await prisma.sourceSettings.findFirst({
     where: { isActive: true },
   });
+
+  activeSourceSettingsCache = value
+    ? { value, expiresAt: Date.now() + ACTIVE_SOURCE_SETTINGS_TTL_MS }
+    : null;
+
+  return value;
 }
 
 export type ValidatedSourceSettings = Awaited<ReturnType<typeof validateSourceSettings>>;
@@ -69,7 +92,7 @@ export type ValidatedSourceSettings = Awaited<ReturnType<typeof validateSourceSe
  * existing row instead of violating the unique constraint on spreadsheetId.
  */
 export async function saveSourceSettings(input: ValidatedSourceSettings) {
-  return prisma.$transaction(async (tx) => {
+  const saved = await prisma.$transaction(async (tx) => {
     await tx.sourceSettings.updateMany({
       where: { isActive: true, NOT: { spreadsheetId: input.spreadsheetId } },
       data: { isActive: false },
@@ -92,4 +115,8 @@ export async function saveSourceSettings(input: ValidatedSourceSettings) {
       },
     });
   });
+
+  invalidateActiveSourceSettingsCache();
+
+  return saved;
 }
