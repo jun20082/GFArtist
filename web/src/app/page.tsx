@@ -39,7 +39,7 @@ export default async function Home({
         <div className="flex items-start justify-between gap-6">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-300">
-              Sejin Response Desk
+              Response Desk
             </p>
             <h1 className="mt-2 text-2xl font-semibold">응답자 검색</h1>
             <p className="mt-2 text-sm text-slate-400">

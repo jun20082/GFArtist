@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "세진 응답 데스크",
+  title: "응답 데스크",
   description: "Google Forms 응답 검색과 현장 운영 상태 관리 도구",
 };
 
