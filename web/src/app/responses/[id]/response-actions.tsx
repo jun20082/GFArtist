@@ -73,6 +73,7 @@ export function ResponseActions({
               type="button"
             >
               <span
+                aria-hidden="true"
                 className="h-3 w-3 rounded-full"
                 style={{ backgroundColor: category.color }}
               />
@@ -142,8 +143,16 @@ export function ResponseActions({
         </div>
       </div>
 
-      {notice ? <p className="text-sm text-amber-300">{notice}</p> : null}
-      {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+      {notice ? (
+        <p aria-live="polite" className="text-sm text-amber-300" role="status">
+          {notice}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-rose-300" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -39,8 +39,16 @@ export function SyncResponsesButton() {
       >
         {isSyncing ? '동기화 중...' : '지금 동기화'}
       </button>
-      {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
-      {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+      {message ? (
+        <p aria-live="polite" className="text-sm text-emerald-300" role="status">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-rose-300" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

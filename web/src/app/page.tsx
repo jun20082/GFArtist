@@ -85,6 +85,7 @@ export default async function Home({
         <form className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5" method="get">
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
+              aria-label="이름 또는 전화번호 검색"
               className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
               defaultValue={query}
               name="q"
@@ -129,16 +130,28 @@ export default async function Home({
           </div>
         </form>
 
-        <p className="mt-6 text-sm text-slate-400">검색 결과 {responses.length}건</p>
+        <p aria-live="polite" className="mt-6 text-sm text-slate-400" role="status">
+          검색 결과 {responses.length}건
+        </p>
+
+        {responses.length === 0 ? (
+          <p className="mt-3 rounded-xl border border-white/10 bg-white/5 px-4 py-6 text-sm text-slate-400">
+            조건에 맞는 응답자가 없습니다. 이름이나 전화번호 뒷자리를 다시 확인하세요.
+          </p>
+        ) : null}
 
         <ul className="mt-3 space-y-2">
           {responses.map((response) => (
             <li key={response.id}>
               <Link
-                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-white/30"
+                aria-label={`${response.name}, ${response.category.name}, ${
+                  response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'
+                }, ${response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'}`}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-white/30 focus-visible:border-emerald-300 focus-visible:outline-none"
                 href={`/responses/${response.id}`}
               >
                 <span
+                  aria-hidden="true"
                   className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: response.category.color }}
                 />
