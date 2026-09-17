@@ -40,6 +40,12 @@ export async function ensureAppsScriptIds() {
     throw new Error('Apps Script Web App configuration is missing.');
   }
 
+  if (!url.endsWith('/exec')) {
+    throw new Error(
+      `GOOGLE_APPS_SCRIPT_URL must be the deployed Web App URL ending with /exec. Current value: ${url}`,
+    );
+  }
+
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -48,7 +54,10 @@ export async function ensureAppsScriptIds() {
   });
 
   if (!response.ok) {
-    throw new Error(`Apps Script request failed with status ${response.status}.`);
+    throw new Error(
+      `Apps Script request failed with status ${response.status}. Target: ${url}. ` +
+        'Check that GOOGLE_APPS_SCRIPT_URL points at the current Web App deployment.',
+    );
   }
 
   const result = (await response.json()) as {
