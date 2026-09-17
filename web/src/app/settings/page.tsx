@@ -1,0 +1,64 @@
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { SourceSettingsForm } from '@/app/settings/source-settings-form';
+import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
+import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
+import { getActiveSourceSettings } from '@/lib/source-settings';
+import { StatusSyncState } from '@/generated/prisma/enums';
+import { prisma } from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
+
+export default async function SettingsPage() {
+  const session = await auth();
+
+  if (!session) {
+    redirect('/login');
+  }
+
+  const sourceSettings = await getActiveSourceSettings();
+  const pendingCount = sourceSettings
+    ? await prisma.response.count({
+        where: {
+          sourceSettingsId: sourceSettings.id,
+          statusSyncState: { in: [StatusSyncState.PENDING, StatusSyncState.FAILED] },
+        },
+      })
+    : 0;
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
+      <div className="mx-auto max-w-3xl">
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-300">
+          Settings
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold">Google Sheets 연결</h1>
+        <p className="mt-3 text-sm leading-6 text-slate-300">
+          원본 응답 탭과 같은 Spreadsheet의 운영 상태 탭을 연결합니다.
+        </p>
+        {sourceSettings ? (
+          <dl className="mt-6 space-y-1 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+            <div>파티명: {sourceSettings.partyName}</div>
+            <div>원본 탭: {sourceSettings.responseSheetName}</div>
+            <div>운영 상태 탭: {sourceSettings.operatingStatusSheetName}</div>
+            <div>
+              마지막 동기화:{' '}
+              {sourceSettings.lastResponseSyncAt
+                ? sourceSettings.lastResponseSyncAt.toLocaleString('ko-KR')
+                : '없음'}
+            </div>
+          </dl>
+        ) : null}
+        <div className="mt-8">
+          <SourceSettingsForm />
+        </div>
+        <div className="mt-6">
+          <SyncResponsesButton />
+        </div>
+        <div className="mt-6">
+          <RetryStatusSyncButton pendingCount={pendingCount} />
+        </div>
+      </div>
+    </main>
+  );
+}

@@ -1,0 +1,144 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CategoryCode {
+  UNPAID
+  PAYMENT_CONFIRMED
+  MESSAGE_SENT
+}
+
+enum EntryStatus {
+  NOT_ENTERED
+  ENTERED
+}
+
+enum ProductStatus {
+  NOT_RECEIVED
+  RECEIVED
+}
+
+enum StatusSyncState {
+  SYNCED
+  PENDING
+  FAILED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model SourceSettings {
+  id                       String     @id @default(cuid())
+  partyName                String
+  spreadsheetId            String     @unique
+  responseSheetName        String
+  operatingStatusSheetName String
+  isActive                 Boolean    @default(true)
+  lastResponseSyncAt       DateTime?
+  createdAt                DateTime   @default(now())
+  updatedAt                DateTime   @updatedAt
+  responses                Response[]
+  syncRuns                 SyncRun[]
+}
+
+model Response {
+  id                  String          @id @default(cuid())
+  sourceSettingsId    String
+  internalResponseId  String          @unique
+  name                String
+  phoneRaw            String
+  phoneNormalized     String
+  gender              String
+  orderedProduct      String
+  categoryCode        CategoryCode    @default(UNPAID)
+  entryStatus         EntryStatus     @default(NOT_ENTERED)
+  productStatus       ProductStatus   @default(NOT_RECEIVED)
+  statusSyncState     StatusSyncState @default(PENDING)
+  lastStatusSyncAt    DateTime?
+  lastStatusSyncError String?         @db.Text
+  sourceRowNumber     Int?
+  lastResponseSyncAt  DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  sourceSettings      SourceSettings  @relation(fields: [sourceSettingsId], references: [id], onDelete: Restrict)
+  category            Category        @relation(fields: [categoryCode], references: [code], onDelete: Restrict)
+
+  @@index([sourceSettingsId, name])
+  @@index([sourceSettingsId, phoneNormalized])
+  @@index([sourceSettingsId, entryStatus, productStatus])
+}
+
+model Category {
+  code      CategoryCode @id
+  name      String
+  color     String
+  sortOrder Int          @default(0)
+  isActive  Boolean      @default(true)
+  responses Response[]
+}
+
+model SyncRun {
+  id               String         @id @default(cuid())
+  sourceSettingsId String
+  kind             String
+  startedAt        DateTime       @default(now())
+  finishedAt       DateTime?
+  success          Boolean        @default(false)
+  processedCount   Int            @default(0)
+  errorMessage     String?        @db.Text
+  sourceSettings   SourceSettings @relation(fields: [sourceSettingsId], references: [id], onDelete: Cascade)
+
+  @@index([sourceSettingsId, startedAt])
+}

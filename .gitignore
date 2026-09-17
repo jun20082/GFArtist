@@ -1,0 +1,7 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Local database data
+postgres-data/
