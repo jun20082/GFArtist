@@ -17,6 +17,12 @@ type ResponseActionsProps = {
   categories: CategoryOption[];
 };
 
+type SelectedState = {
+  categoryCode: string;
+  entryStatus: string;
+  productStatus: string;
+};
+
 export function ResponseActions({
   responseId,
   categoryCode,
@@ -25,34 +31,48 @@ export function ResponseActions({
   categories,
 }: ResponseActionsProps) {
   const router = useRouter();
+  const [selected, setSelected] = useState<SelectedState>({
+    categoryCode,
+    entryStatus,
+    productStatus,
+  });
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  async function update(payload: Record<string, string>) {
+  async function update(patch: Partial<SelectedState>) {
+    const previous = selected;
     setError(null);
     setNotice(null);
     setIsSaving(true);
+    setSelected((current) => ({ ...current, ...patch }));
 
-    const response = await fetch(`/api/responses/${responseId}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch(`/api/responses/${responseId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
 
-    const result = (await response.json()) as { error?: string; syncError?: string | null };
-    setIsSaving(false);
+      const result = (await response.json()) as { error?: string; syncError?: string | null };
 
-    if (!response.ok) {
-      setError(result.error ?? '상태 변경에 실패했습니다.');
-      return;
+      if (!response.ok) {
+        setSelected(previous);
+        setError(result.error ?? '상태 변경에 실패했습니다.');
+        return;
+      }
+
+      if (result.syncError) {
+        setNotice(`저장됨. 운영 상태 탭 반영 실패: ${result.syncError}`);
+      }
+
+      router.refresh();
+    } catch {
+      setSelected(previous);
+      setError('상태 변경에 실패했습니다. 네트워크를 확인하세요.');
+    } finally {
+      setIsSaving(false);
     }
-
-    if (result.syncError) {
-      setNotice(`저장됨. 운영 상태 탭 반영 실패: ${result.syncError}`);
-    }
-
-    router.refresh();
   }
 
   return (
@@ -63,11 +83,11 @@ export function ResponseActions({
           {categories.map((category) => (
             <button
               className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition disabled:opacity-50 ${
-                category.code === categoryCode
+                category.code === selected.categoryCode
                   ? 'border-emerald-300 bg-emerald-300/10'
                   : 'border-white/15 hover:border-white/40'
               }`}
-              disabled={isSaving || category.code === categoryCode}
+              disabled={isSaving || category.code === selected.categoryCode}
               key={category.code}
               onClick={() => update({ categoryCode: category.code })}
               type="button"
@@ -88,11 +108,11 @@ export function ResponseActions({
         <div className="mt-2 flex gap-2">
           <button
             className={`rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
-              entryStatus === 'ENTERED'
+              selected.entryStatus === 'ENTERED'
                 ? 'border-emerald-300 bg-emerald-300/10'
                 : 'border-white/15 hover:border-white/40'
             }`}
-            disabled={isSaving || entryStatus === 'ENTERED'}
+            disabled={isSaving || selected.entryStatus === 'ENTERED'}
             onClick={() => update({ entryStatus: 'ENTERED' })}
             type="button"
           >
@@ -100,11 +120,11 @@ export function ResponseActions({
           </button>
           <button
             className={`rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
-              entryStatus === 'NOT_ENTERED'
+              selected.entryStatus === 'NOT_ENTERED'
                 ? 'border-emerald-300 bg-emerald-300/10'
                 : 'border-white/15 hover:border-white/40'
             }`}
-            disabled={isSaving || entryStatus === 'NOT_ENTERED'}
+            disabled={isSaving || selected.entryStatus === 'NOT_ENTERED'}
             onClick={() => update({ entryStatus: 'NOT_ENTERED' })}
             type="button"
           >
@@ -118,11 +138,11 @@ export function ResponseActions({
         <div className="mt-2 flex gap-2">
           <button
             className={`rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
-              productStatus === 'RECEIVED'
+              selected.productStatus === 'RECEIVED'
                 ? 'border-sky-300 bg-sky-300/10'
                 : 'border-white/15 hover:border-white/40'
             }`}
-            disabled={isSaving || productStatus === 'RECEIVED'}
+            disabled={isSaving || selected.productStatus === 'RECEIVED'}
             onClick={() => update({ productStatus: 'RECEIVED' })}
             type="button"
           >
@@ -130,11 +150,11 @@ export function ResponseActions({
           </button>
           <button
             className={`rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
-              productStatus === 'NOT_RECEIVED'
+              selected.productStatus === 'NOT_RECEIVED'
                 ? 'border-sky-300 bg-sky-300/10'
                 : 'border-white/15 hover:border-white/40'
             }`}
-            disabled={isSaving || productStatus === 'NOT_RECEIVED'}
+            disabled={isSaving || selected.productStatus === 'NOT_RECEIVED'}
             onClick={() => update({ productStatus: 'NOT_RECEIVED' })}
             type="button"
           >

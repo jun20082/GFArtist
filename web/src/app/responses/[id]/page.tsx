@@ -95,6 +95,7 @@ export default async function ResponseDetailPage({
             }))}
             categoryCode={response.categoryCode}
             entryStatus={response.entryStatus}
+            key={response.id}
             productStatus={response.productStatus}
             responseId={response.id}
           />
