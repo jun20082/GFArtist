@@ -1,9 +1,11 @@
 import { auth } from '@/auth';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { z } from 'zod';
 import { StatusSyncState } from '@/generated/prisma/enums';
 import { prisma } from '@/lib/prisma';
 import { syncResponseStatus } from '@/lib/operating-status';
+
+export const maxDuration = 30;
 
 const updateSchema = z
   .object({
@@ -34,12 +36,13 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userId = session.user.id;
   const { id } = await params;
 
   try {
     const input = updateSchema.parse(await request.json());
 
-    const { sourceSettings: _, ...updated } = await prisma.response.update({
+    const { sourceSettings, ...updated } = await prisma.response.update({
       where: { id },
       data: {
         ...input,
@@ -49,31 +52,18 @@ export async function PATCH(
       include: { category: true, sourceSettings: true },
     });
 
-    let syncError: string | null = null;
-    let response = updated;
+    after(async () => {
+      try {
+        await syncResponseStatus(userId, updated.id, undefined, {
+          ...updated,
+          sourceSettings,
+        });
+      } catch {
+        // syncResponseStatus persists FAILED and the error message on the row.
+      }
+    });
 
-    try {
-      await syncResponseStatus(session.user.id, updated.id, undefined, {
-        ...updated,
-        sourceSettings: _,
-      });
-      response = {
-        ...updated,
-        statusSyncState: StatusSyncState.SYNCED,
-        lastStatusSyncAt: new Date(),
-        lastStatusSyncError: null,
-      };
-    } catch (syncFailure) {
-      syncError =
-        syncFailure instanceof Error ? syncFailure.message : '운영 상태 동기화에 실패했습니다.';
-      response = {
-        ...updated,
-        statusSyncState: StatusSyncState.FAILED,
-        lastStatusSyncError: syncError,
-      };
-    }
-
-    return NextResponse.json({ response, syncError });
+    return NextResponse.json({ response: updated, syncError: null });
   } catch (error) {
     if (isRecordNotFound(error)) {
       return NextResponse.json({ error: 'Response not found.' }, { status: 404 });
