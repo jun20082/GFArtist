@@ -25,6 +25,12 @@ export default async function SettingsPage() {
         },
       })
     : 0;
+  const lastSyncRun = sourceSettings
+    ? await prisma.syncRun.findFirst({
+        where: { sourceSettingsId: sourceSettings.id, kind: 'responses' },
+        orderBy: { startedAt: 'desc' },
+      })
+    : null;
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
@@ -47,6 +53,17 @@ export default async function SettingsPage() {
                 ? sourceSettings.lastResponseSyncAt.toLocaleString('ko-KR')
                 : '없음'}
             </div>
+            <div>
+              최근 동기화 결과:{' '}
+              {lastSyncRun
+                ? `${lastSyncRun.processedCount}건 · ${
+                    lastSyncRun.success ? '성공' : lastSyncRun.finishedAt ? '실패' : '진행 중'
+                  } · ${lastSyncRun.startedAt.toLocaleString('ko-KR')}`
+                : '없음'}
+            </div>
+            {lastSyncRun?.errorMessage ? (
+              <div className="text-rose-300">동기화 오류: {lastSyncRun.errorMessage}</div>
+            ) : null}
           </dl>
         ) : null}
         <div className="mt-8">
