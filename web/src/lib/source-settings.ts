@@ -61,3 +61,35 @@ export async function getActiveSourceSettings() {
     where: { isActive: true },
   });
 }
+
+export type ValidatedSourceSettings = Awaited<ReturnType<typeof validateSourceSettings>>;
+
+/**
+ * Stores the active source settings. Re-saving the same spreadsheet updates the
+ * existing row instead of violating the unique constraint on spreadsheetId.
+ */
+export async function saveSourceSettings(input: ValidatedSourceSettings) {
+  return prisma.$transaction(async (tx) => {
+    await tx.sourceSettings.updateMany({
+      where: { isActive: true, NOT: { spreadsheetId: input.spreadsheetId } },
+      data: { isActive: false },
+    });
+
+    return tx.sourceSettings.upsert({
+      where: { spreadsheetId: input.spreadsheetId },
+      create: {
+        partyName: input.partyName,
+        spreadsheetId: input.spreadsheetId,
+        responseSheetName: input.responseSheetName,
+        operatingStatusSheetName: input.operatingStatusSheetName,
+        isActive: true,
+      },
+      update: {
+        partyName: input.partyName,
+        responseSheetName: input.responseSheetName,
+        operatingStatusSheetName: input.operatingStatusSheetName,
+        isActive: true,
+      },
+    });
+  });
+}

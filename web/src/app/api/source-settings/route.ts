@@ -2,10 +2,10 @@ import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
 import {
   getActiveSourceSettings,
+  saveSourceSettings,
   sourceSettingsInput,
   validateSourceSettings,
 } from '@/lib/source-settings';
-import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   const session = await auth();
@@ -27,23 +27,7 @@ export async function POST(request: Request) {
   try {
     const input = sourceSettingsInput.parse(await request.json());
     const validated = await validateSourceSettings(session.user.id, input);
-
-    const sourceSettings = await prisma.$transaction(async (tx) => {
-      await tx.sourceSettings.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
-      });
-
-      return tx.sourceSettings.create({
-        data: {
-          partyName: validated.partyName,
-          spreadsheetId: validated.spreadsheetId,
-          responseSheetName: validated.responseSheetName,
-          operatingStatusSheetName: validated.operatingStatusSheetName,
-          isActive: true,
-        },
-      });
-    });
+    const sourceSettings = await saveSourceSettings(validated);
 
     return NextResponse.json({ sourceSettings }, { status: 201 });
   } catch (error) {
