@@ -90,6 +90,32 @@ describe('syncResponseStatus 상태 전이', () => {
     assert.ok(saved.lastStatusSyncAt);
   });
 
+  test('실행 시점의 최신 DB 값을 writer에게 넘긴다', async () => {
+    const response = await createResponse(sourceSettingsId, {
+      name: '최신값',
+      phoneRaw: '010-7777-8888',
+      entryStatus: 'NOT_ENTERED',
+      productStatus: 'NOT_RECEIVED',
+    });
+
+    await prisma.response.update({
+      where: { id: response.id },
+      data: { entryStatus: 'ENTERED', productStatus: 'RECEIVED' },
+    });
+
+    const captured: ResponseForSync[] = [];
+    const writer: OperatingStatusWriter = async (_userId, _settings, received) => {
+      captured.push(received);
+      return { action: 'updated', rowNumber: 2 };
+    };
+
+    await syncResponseStatus('user-1', response.id, writer);
+
+    assert.equal(captured.length, 1);
+    assert.equal(captured[0].entryStatus, 'ENTERED');
+    assert.equal(captured[0].productStatus, 'RECEIVED');
+  });
+
   test('실패해도 DB 상태와 입장·상품 값을 보존한다', async () => {
     const response = await createResponse(sourceSettingsId, {
       name: '실패자',

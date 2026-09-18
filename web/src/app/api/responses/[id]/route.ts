@@ -31,14 +31,11 @@ export async function PATCH(
 
   try {
     const input = updateSchema.parse(await request.json());
-    const { response, sourceSettings } = await updateResponseStatus(id, input);
+    const response = await updateResponseStatus(id, input);
 
     after(async () => {
       try {
-        await syncResponseStatus(userId, response.id, undefined, {
-          ...response,
-          sourceSettings,
-        });
+        await syncResponseStatus(userId, response.id);
       } catch {
         // syncResponseStatus persists FAILED and the error message on the row.
       }

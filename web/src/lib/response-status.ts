@@ -30,17 +30,15 @@ function isRecordNotFound(error: unknown) {
  */
 export async function updateResponseStatus(responseId: string, input: ResponseStatusInput) {
   try {
-    const { sourceSettings, ...response } = await prisma.response.update({
+    return await prisma.response.update({
       where: { id: responseId },
       data: {
         ...input,
         statusSyncState: StatusSyncState.PENDING,
         lastStatusSyncError: null,
       },
-      include: { category: true, sourceSettings: true },
+      include: { category: true },
     });
-
-    return { response, sourceSettings };
   } catch (error) {
     if (isRecordNotFound(error)) {
       throw new ResponseNotFoundError(responseId);

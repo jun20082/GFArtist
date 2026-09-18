@@ -121,22 +121,15 @@ const defaultOperatingStatusWriter: OperatingStatusWriter = async (
   return { action: 'appended' };
 };
 
-export type ResponseForSyncWithSource = ResponseForSync & {
-  sourceSettings: SourceSettings;
-};
-
 export async function syncResponseStatus(
   userId: string,
   responseId: string,
   writer: OperatingStatusWriter = defaultOperatingStatusWriter,
-  preloaded?: ResponseForSyncWithSource,
 ) {
-  const response =
-    preloaded ??
-    (await prisma.response.findUnique({
-      where: { id: responseId },
-      include: { sourceSettings: true },
-    }));
+  const response = await prisma.response.findUnique({
+    where: { id: responseId },
+    include: { sourceSettings: true },
+  });
 
   if (!response) {
     throw new Error('Response not found.');
