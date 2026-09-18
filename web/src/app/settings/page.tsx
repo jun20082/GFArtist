@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { SourceSettingsForm } from '@/app/settings/source-settings-form';
 import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
@@ -39,13 +40,20 @@ export default async function SettingsPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-3xl">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-300">
-          Settings
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold">Google Sheets 연결</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-300">
-          원본 응답 탭과 같은 Spreadsheet의 운영 상태 탭을 연결합니다.
-        </p>
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-300">
+              Settings
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold">Google Sheets 연결</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              원본 응답 탭과 같은 Spreadsheet의 운영 상태 탭을 연결합니다.
+            </p>
+          </div>
+          <Link className="text-sm text-emerald-300 hover:text-emerald-200" href="/">
+            응답자 검색
+          </Link>
+        </div>
         {sourceSettings ? (
           <dl className="mt-6 space-y-1 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
             <div>파티명: {sourceSettings.partyName}</div>
