@@ -79,7 +79,7 @@ export function SearchClient({
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
             aria-label="이름 또는 전화번호 검색"
-            className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+            className="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
             name="q"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="이름 또는 전화번호 (뒷자리 가능)"
@@ -87,7 +87,7 @@ export function SearchClient({
             value={query}
           />
           <button
-            className="rounded-xl bg-emerald-300 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
+            className="shrink-0 whitespace-nowrap rounded-xl bg-emerald-300 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
             type="submit"
           >
             검색
