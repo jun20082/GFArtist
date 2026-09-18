@@ -9,6 +9,10 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+function formatKoreaTime(value: Date) {
+  return value.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+}
+
 export default async function SettingsPage() {
   const session = await auth();
 
@@ -50,7 +54,7 @@ export default async function SettingsPage() {
             <div>
               마지막 동기화:{' '}
               {sourceSettings.lastResponseSyncAt
-                ? sourceSettings.lastResponseSyncAt.toLocaleString('ko-KR')
+                ? formatKoreaTime(sourceSettings.lastResponseSyncAt)
                 : '없음'}
             </div>
             <div>
@@ -58,7 +62,7 @@ export default async function SettingsPage() {
               {lastSyncRun
                 ? `${lastSyncRun.processedCount}건 · ${
                     lastSyncRun.success ? '성공' : lastSyncRun.finishedAt ? '실패' : '진행 중'
-                  } · ${lastSyncRun.startedAt.toLocaleString('ko-KR')}`
+                  } · ${formatKoreaTime(lastSyncRun.finishedAt ?? lastSyncRun.startedAt)}`
                 : '없음'}
             </div>
             {lastSyncRun?.errorMessage ? (

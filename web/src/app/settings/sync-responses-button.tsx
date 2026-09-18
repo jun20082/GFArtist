@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function SyncResponsesButton() {
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -22,6 +24,7 @@ export function SyncResponsesButton() {
     }
 
     setMessage(`동기화 완료: ${result.processedCount ?? 0}건 반영`);
+    router.refresh();
   }
 
   return (
