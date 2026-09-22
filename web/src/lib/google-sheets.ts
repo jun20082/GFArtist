@@ -5,6 +5,19 @@ type SheetsClient = ReturnType<typeof google.sheets>;
 
 const sheetsClientCache = new Map<string, { fingerprint: string; sheets: SheetsClient }>();
 
+const REQUIRED_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+
+function hasRequiredSheetsScope(scope: string | null) {
+  if (!scope) {
+    return true;
+  }
+
+  return scope
+    .split(/\s+/)
+    .filter(Boolean)
+    .includes(REQUIRED_SHEETS_SCOPE);
+}
+
 export async function getSheetsClient(userId: string) {
   const account = await prisma.account.findFirst({
     where: {
@@ -15,6 +28,13 @@ export async function getSheetsClient(userId: string) {
 
   if (!account) {
     throw new Error('Google account connection was not found.');
+  }
+
+  if (!hasRequiredSheetsScope(account.scope)) {
+    throw new Error(
+      'Google Sheets 권한이 없습니다. 로그아웃한 뒤 다시 로그인해 스프레드시트 접근을 승인하세요. ' +
+        `(현재 승인된 범위: ${account.scope})`,
+    );
   }
 
   const clientId = process.env.AUTH_GOOGLE_ID;
@@ -42,6 +62,39 @@ export async function getSheetsClient(userId: string) {
     access_token: account.access_token ?? undefined,
     refresh_token: account.refresh_token ?? undefined,
     expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
+  });
+
+  oauthClient.on('tokens', (tokens) => {
+    const data: {
+      access_token?: string;
+      refresh_token?: string;
+      expires_at?: number;
+      scope?: string;
+    } = {};
+
+    if (tokens.access_token) {
+      data.access_token = tokens.access_token;
+    }
+
+    if (typeof tokens.expiry_date === 'number') {
+      data.expires_at = Math.floor(tokens.expiry_date / 1000);
+    }
+
+    if (tokens.refresh_token) {
+      data.refresh_token = tokens.refresh_token;
+    }
+
+    if (tokens.scope) {
+      data.scope = tokens.scope;
+    }
+
+    if (Object.keys(data).length === 0) {
+      return;
+    }
+
+    void prisma.account
+      .update({ where: { id: account.id }, data })
+      .catch(() => undefined);
   });
 
   const sheets = google.sheets({ version: 'v4', auth: oauthClient });
