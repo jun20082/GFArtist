@@ -2,15 +2,7 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
-
-function getAllowedEmails() {
-  return new Set(
-    (process.env.GOOGLE_ALLOWED_EMAILS ?? '')
-      .split(',')
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
+import { isEmailAllowed, parseAllowedEmails } from '@/lib/allowed-emails';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -85,8 +77,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user }) {
-      const email = user.email?.toLowerCase();
-      return Boolean(email && getAllowedEmails().has(email));
+      return isEmailAllowed(user.email, parseAllowedEmails(process.env.GOOGLE_ALLOWED_EMAILS));
     },
     async jwt({ token, user }) {
       if (user?.id) {
