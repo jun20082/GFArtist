@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { SourceSettingsForm } from '@/app/settings/source-settings-form';
 import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
+import { CleanupDuplicatesButton } from '@/app/settings/cleanup-duplicates-button';
 import { getActiveSourceSettings } from '@/lib/source-settings';
 import { StatusSyncState } from '@/generated/prisma/enums';
 import { prisma } from '@/lib/prisma';
@@ -86,6 +87,9 @@ export default async function SettingsPage() {
         </div>
         <div className="mt-6">
           <RetryStatusSyncButton pendingCount={pendingCount} />
+        </div>
+        <div className="mt-6">
+          <CleanupDuplicatesButton />
         </div>
       </div>
     </main>
