@@ -58,6 +58,39 @@ export function findOperatingStatusRowIndex(
   return rows.findIndex((row) => String(row[idIndex] ?? '').trim() === internalResponseId);
 }
 
+export function findOperatingStatusRowIndexes(
+  rows: unknown[][],
+  idIndex: number,
+  internalResponseId: string,
+) {
+  const indexes: number[] = [];
+
+  rows.forEach((row, index) => {
+    if (String(row[idIndex] ?? '').trim() === internalResponseId) {
+      indexes.push(index);
+    }
+  });
+
+  return indexes;
+}
+
+/**
+ * A duplicated internal id means the operating status tab has two rows for the
+ * same response. Updating only the first row would leave a stale duplicate, so
+ * refuse the sync and point the manager at the cleanup action.
+ */
+export function assertSingleOperatingStatusRow(
+  matchingIndexes: number[],
+  internalResponseId: string,
+) {
+  if (matchingIndexes.length > 1) {
+    throw new Error(
+      `운영 상태 탭에 같은 내부 ID가 ${matchingIndexes.length}개 행 있습니다(${internalResponseId}). ` +
+        'Sheets 설정의 "운영 상태 중복 정리"를 먼저 실행하세요.',
+    );
+  }
+}
+
 const defaultOperatingStatusWriter: OperatingStatusWriter = async (
   userId,
   sourceSettings,
@@ -92,11 +125,15 @@ const defaultOperatingStatusWriter: OperatingStatusWriter = async (
 
   const managedValues = buildOperatingStatusValues(response);
   const dataRows = rows.slice(1);
-  const targetIndex = findOperatingStatusRowIndex(
+  const matchingIndexes = findOperatingStatusRowIndexes(
     dataRows,
     idIndex,
     response.internalResponseId,
   );
+
+  assertSingleOperatingStatusRow(matchingIndexes, response.internalResponseId);
+
+  const targetIndex = matchingIndexes[0] ?? -1;
 
   if (targetIndex >= 0) {
     const sheetRow = targetIndex + 2;

@@ -1,9 +1,11 @@
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  assertSingleOperatingStatusRow,
   buildOperatingStatusRow,
   buildOperatingStatusValues,
   findOperatingStatusRowIndex,
+  findOperatingStatusRowIndexes,
   retryPendingStatusSync,
   syncResponseStatus,
   type OperatingStatusWriter,
@@ -55,6 +57,28 @@ describe('운영 상태 순수 함수', () => {
   test('findOperatingStatusRowIndex가 없으면 -1을 돌려준다', () => {
     const rows = [['resp_a']];
     assert.equal(findOperatingStatusRowIndex(rows, 0, 'resp_z'), -1);
+  });
+
+  test('findOperatingStatusRowIndexes가 중복 행을 모두 돌려준다', () => {
+    const rows = [['resp_a'], ['resp_b'], ['resp_a'], ['resp_a']];
+    assert.deepEqual(findOperatingStatusRowIndexes(rows, 0, 'resp_a'), [0, 2, 3]);
+  });
+
+  test('findOperatingStatusRowIndexes가 없으면 빈 배열을 돌려준다', () => {
+    const rows = [['resp_a'], ['resp_b']];
+    assert.deepEqual(findOperatingStatusRowIndexes(rows, 0, 'resp_z'), []);
+  });
+
+  test('assertSingleOperatingStatusRow가 단일 행은 통과시킨다', () => {
+    assert.doesNotThrow(() => assertSingleOperatingStatusRow([], 'resp_a'));
+    assert.doesNotThrow(() => assertSingleOperatingStatusRow([2], 'resp_a'));
+  });
+
+  test('assertSingleOperatingStatusRow가 중복 행은 거부한다', () => {
+    assert.throws(
+      () => assertSingleOperatingStatusRow([4, 7], 'resp_a'),
+      /같은 내부 ID가 2개 행 있습니다\(resp_a\)/,
+    );
   });
 });
 
