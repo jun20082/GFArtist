@@ -30,16 +30,47 @@ enum StatusSyncState {
   FAILED
 }
 
+enum WorkspaceRole {
+  OWNER
+  OPERATOR
+}
+
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String            @id @default(cuid())
+  name             String?
+  email            String?           @unique
+  emailVerified    DateTime?
+  image            String?
+  accounts         Account[]
+  sessions         Session[]
+  ownedWorkspaces  Workspace[]       @relation("WorkspaceOwner")
+  workspaceMembers WorkspaceMember[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model Workspace {
+  id             String            @id @default(cuid())
+  name           String
+  ownerUserId    String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  owner          User              @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  members        WorkspaceMember[]
+  sourceSettings SourceSettings?
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(OPERATOR)
+  createdAt   DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
 }
 
 model Account {
@@ -80,17 +111,26 @@ model VerificationToken {
 }
 
 model SourceSettings {
-  id                       String     @id @default(cuid())
-  partyName                String
-  spreadsheetId            String     @unique
-  responseSheetName        String
-  operatingStatusSheetName String
-  isActive                 Boolean    @default(true)
-  lastResponseSyncAt       DateTime?
-  createdAt                DateTime   @default(now())
-  updatedAt                DateTime   @updatedAt
-  responses                Response[]
-  syncRuns                 SyncRun[]
+  id                        String     @id @default(cuid())
+  workspaceId               String?    @unique
+  partyName                 String
+  spreadsheetId             String     @unique
+  responseSheetName         String
+  operatingStatusSheetName  String
+  appsScriptUrl             String?
+  appsScriptSecretEncrypted String?    @db.Text
+  nameHeader                String     @default("이름")
+  phoneHeader               String     @default("전화번호")
+  genderHeader              String     @default("성별")
+  orderedProductHeader      String     @default("주문 상품")
+  internalResponseIdHeader  String     @default("_internal_response_id")
+  isActive                  Boolean    @default(true)
+  lastResponseSyncAt        DateTime?
+  createdAt                 DateTime   @default(now())
+  updatedAt                 DateTime   @updatedAt
+  workspace                 Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  responses                 Response[]
+  syncRuns                  SyncRun[]
 }
 
 model Response {
