@@ -116,6 +116,54 @@ describe('syncResponseStatus 상태 전이', () => {
     assert.equal(captured[0].productStatus, 'RECEIVED');
   });
 
+  test('같은 응답을 동시에 동기화해도 시트 행이 하나만 생긴다', async () => {
+    const response = await createResponse(sourceSettingsId, {
+      name: '동시성',
+      phoneRaw: '010-9999-0000',
+      entryStatus: 'ENTERED',
+      productStatus: 'RECEIVED',
+    });
+
+    const sheet: string[][] = [['_internal_response_id', '이름', '전화번호', '입장 여부', '상품 수령 여부']];
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    const writer: OperatingStatusWriter = async (_userId, _settings, received) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const values = [...buildOperatingStatusValues(received).values()];
+      const rowIndex = sheet.findIndex(
+        (row, index) => index > 0 && row[0] === received.internalResponseId,
+      );
+
+      if (rowIndex >= 0) {
+        sheet[rowIndex] = values;
+      } else {
+        sheet.push(values);
+      }
+
+      inFlight -= 1;
+      return { action: 'appended' };
+    };
+
+    await Promise.all([
+      syncResponseStatus('user-1', response.id, writer),
+      syncResponseStatus('user-1', response.id, writer),
+    ]);
+
+    assert.equal(sheet.length, 2);
+    assert.equal(maxInFlight, 1);
+    assert.deepEqual(sheet[1], [
+      response.internalResponseId,
+      '동시성',
+      '010-9999-0000',
+      '입장 완료',
+      '수령 완료',
+    ]);
+  });
+
   test('실패해도 DB 상태와 입장·상품 값을 보존한다', async () => {
     const response = await createResponse(sourceSettingsId, {
       name: '실패자',

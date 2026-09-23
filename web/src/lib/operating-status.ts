@@ -121,46 +121,74 @@ const defaultOperatingStatusWriter: OperatingStatusWriter = async (
   return { action: 'appended' };
 };
 
+const SYNC_LOCK_TIMEOUT = '10s';
+const SYNC_TRANSACTION_TIMEOUT_MS = 25_000;
+const SYNC_TRANSACTION_MAX_WAIT_MS = 10_000;
+
+/**
+ * Serializes the operating status sync per response with a PostgreSQL advisory
+ * lock. Two concurrent syncs of the same response would otherwise both read the
+ * sheet before either appended, creating duplicate rows for one internal id.
+ * The lock is scoped to the transaction, so other responses stay parallel.
+ */
 export async function syncResponseStatus(
   userId: string,
   responseId: string,
   writer: OperatingStatusWriter = defaultOperatingStatusWriter,
 ) {
-  const response = await prisma.response.findUnique({
-    where: { id: responseId },
-    include: { sourceSettings: true },
-  });
+  const outcome = await prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT set_config('lock_timeout', ${SYNC_LOCK_TIMEOUT}, true)`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${responseId})::bigint)::text AS locked`;
 
-  if (!response) {
-    throw new Error('Response not found.');
+      const response = await tx.response.findUnique({
+        where: { id: responseId },
+        include: { sourceSettings: true },
+      });
+
+      if (!response) {
+        throw new Error('Response not found.');
+      }
+
+      try {
+        const result = await writer(userId, response.sourceSettings, response);
+
+        await tx.response.update({
+          where: { id: response.id },
+          data: {
+            statusSyncState: StatusSyncState.SYNCED,
+            lastStatusSyncAt: new Date(),
+            lastStatusSyncError: null,
+          },
+        });
+
+        return { ok: true as const, result };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Operating status sync failed.';
+
+        await tx.response.update({
+          where: { id: response.id },
+          data: {
+            statusSyncState: StatusSyncState.FAILED,
+            lastStatusSyncError: message,
+          },
+        });
+
+        return { ok: false as const, message };
+      }
+    },
+    {
+      maxWait: SYNC_TRANSACTION_MAX_WAIT_MS,
+      timeout: SYNC_TRANSACTION_TIMEOUT_MS,
+    },
+  );
+
+  if (!outcome.ok) {
+    throw new Error(outcome.message);
   }
 
-  try {
-    const result = await writer(userId, response.sourceSettings, response);
-
-    await prisma.response.update({
-      where: { id: response.id },
-      data: {
-        statusSyncState: StatusSyncState.SYNCED,
-        lastStatusSyncAt: new Date(),
-        lastStatusSyncError: null,
-      },
-    });
-
-    return result;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Operating status sync failed.';
-
-    await prisma.response.update({
-      where: { id: response.id },
-      data: {
-        statusSyncState: StatusSyncState.FAILED,
-        lastStatusSyncError: message,
-      },
-    });
-
-    throw error;
-  }
+  return outcome.result;
 }
 
 export async function retryPendingStatusSync(
