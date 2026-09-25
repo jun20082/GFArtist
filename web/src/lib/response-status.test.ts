@@ -7,6 +7,7 @@ import {
   prisma,
   resetDatabase,
   seedDefaultCategories,
+  TEST_USER_ID,
 } from './test-db';
 
 async function setup() {
@@ -25,7 +26,9 @@ describe('updateResponseStatus 상태 변경', () => {
   test('카테고리를 변경한다', async () => {
     const { response } = await setup();
 
-    const updated = await updateResponseStatus(response.id, { categoryCode: 'MESSAGE_SENT' });
+    const updated = await updateResponseStatus(TEST_USER_ID, response.id, {
+      categoryCode: 'MESSAGE_SENT',
+    });
 
     assert.equal(updated.categoryCode, 'MESSAGE_SENT');
     assert.equal(updated.category.code, 'MESSAGE_SENT');
@@ -34,7 +37,9 @@ describe('updateResponseStatus 상태 변경', () => {
   test('입장 여부를 변경한다', async () => {
     const { response } = await setup();
 
-    const updated = await updateResponseStatus(response.id, { entryStatus: 'ENTERED' });
+    const updated = await updateResponseStatus(TEST_USER_ID, response.id, {
+      entryStatus: 'ENTERED',
+    });
 
     assert.equal(updated.entryStatus, 'ENTERED');
   });
@@ -42,7 +47,9 @@ describe('updateResponseStatus 상태 변경', () => {
   test('상품 수령 여부를 변경한다', async () => {
     const { response } = await setup();
 
-    const updated = await updateResponseStatus(response.id, { productStatus: 'RECEIVED' });
+    const updated = await updateResponseStatus(TEST_USER_ID, response.id, {
+      productStatus: 'RECEIVED',
+    });
 
     assert.equal(updated.productStatus, 'RECEIVED');
   });
@@ -54,7 +61,9 @@ describe('updateResponseStatus 상태 변경', () => {
       data: { statusSyncState: 'FAILED', lastStatusSyncError: '이전 실패' },
     });
 
-    const updated = await updateResponseStatus(response.id, { entryStatus: 'ENTERED' });
+    const updated = await updateResponseStatus(TEST_USER_ID, response.id, {
+      entryStatus: 'ENTERED',
+    });
 
     assert.equal(updated.statusSyncState, 'PENDING');
     assert.equal(updated.lastStatusSyncError, null);
@@ -64,9 +73,22 @@ describe('updateResponseStatus 상태 변경', () => {
     await setup();
 
     await assert.rejects(
-      () => updateResponseStatus('missing-response-id', { entryStatus: 'ENTERED' }),
+      () => updateResponseStatus(TEST_USER_ID, 'missing-response-id', { entryStatus: 'ENTERED' }),
       ResponseNotFoundError,
     );
+  });
+
+  test('다른 워크스페이스 응답은 ResponseNotFoundError를 던진다', async () => {
+    const { response } = await setup();
+    await createSourceSettings({ userId: 'user-2', partyName: '다른 파티' });
+
+    await assert.rejects(
+      () => updateResponseStatus('user-2', response.id, { entryStatus: 'ENTERED' }),
+      ResponseNotFoundError,
+    );
+
+    const unchanged = await prisma.response.findUniqueOrThrow({ where: { id: response.id } });
+    assert.equal(unchanged.entryStatus, 'NOT_ENTERED');
   });
 });
 

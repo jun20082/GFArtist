@@ -1,6 +1,6 @@
-import { auth } from '@/auth';
+﻿import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
-import { getActiveSourceSettings } from '@/lib/source-settings';
+import { getWorkspaceSourceSettings } from '@/lib/source-settings';
 import {
   cleanupOperatingStatusDuplicates,
   previewOperatingStatusDuplicates,
@@ -13,7 +13,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const sourceSettings = await getActiveSourceSettings();
+  const sourceSettings = await getWorkspaceSourceSettings(session.user.id);
 
   if (!sourceSettings) {
     return NextResponse.json({ error: 'Active source settings are missing.' }, { status: 400 });
@@ -27,7 +27,7 @@ export async function GET() {
 
     return NextResponse.json({ duplicates });
   } catch (error) {
-    const message = error instanceof Error ? error.message : '중복 조회에 실패했습니다.';
+    const message = error instanceof Error ? error.message : '以묐났 議고쉶???ㅽ뙣?덉뒿?덈떎.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -39,7 +39,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const sourceSettings = await getActiveSourceSettings();
+  const sourceSettings = await getWorkspaceSourceSettings(session.user.id);
 
   if (!sourceSettings) {
     return NextResponse.json({ error: 'Active source settings are missing.' }, { status: 400 });
@@ -53,7 +53,7 @@ export async function POST() {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : '중복 정리에 실패했습니다.';
+    const message = error instanceof Error ? error.message : '以묐났 ?뺣━???ㅽ뙣?덉뒿?덈떎.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { getResponseForMember } from '@/lib/workspace';
 import { ResponseActions } from '@/app/responses/[id]/response-actions';
 
 export const dynamic = 'force-dynamic';
@@ -13,13 +14,13 @@ export default async function ResponseDetailPage({
 }) {
   const session = await auth();
 
-  if (!session) {
+  if (!session?.user?.id) {
     redirect('/login');
   }
 
   const { id } = await params;
   const [response, categories] = await Promise.all([
-    prisma.response.findUnique({ where: { id }, include: { category: true } }),
+    getResponseForMember(session.user.id, id),
     prisma.category.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },

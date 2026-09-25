@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import type { SourceSettings } from '@/generated/prisma/client';
 import { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
+import { ensureOwnedWorkspace, getWorkspaceContext } from '@/lib/workspace';
 
 export const sourceSettingsInput = z.object({
   partyName: z.string().trim().min(1).max(120),
@@ -58,29 +59,39 @@ export async function validateSourceSettings(
   return { ...input, spreadsheetId };
 }
 
-const ACTIVE_SOURCE_SETTINGS_TTL_MS = 5_000;
+const SETTINGS_CACHE_TTL_MS = 5_000;
 
-let activeSourceSettingsCache: {
-  value: SourceSettings;
-  expiresAt: number;
-} | null = null;
+const settingsCache = new Map<string, { value: SourceSettings; expiresAt: number }>();
 
-export function invalidateActiveSourceSettingsCache() {
-  activeSourceSettingsCache = null;
-}
-
-export async function getActiveSourceSettings() {
-  if (activeSourceSettingsCache && activeSourceSettingsCache.expiresAt > Date.now()) {
-    return activeSourceSettingsCache.value;
+export function invalidateSourceSettingsCache(userId?: string) {
+  if (userId) {
+    settingsCache.delete(userId);
+    return;
   }
 
-  const value = await prisma.sourceSettings.findFirst({
-    where: { isActive: true },
-  });
+  settingsCache.clear();
+}
 
-  activeSourceSettingsCache = value
-    ? { value, expiresAt: Date.now() + ACTIVE_SOURCE_SETTINGS_TTL_MS }
-    : null;
+/**
+ * Returns the source settings of the caller's workspace. Each caller only ever
+ * sees their own workspace, so the cache is keyed by user.
+ */
+export async function getWorkspaceSourceSettings(userId: string) {
+  const cached = settingsCache.get(userId);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  const context = await getWorkspaceContext(userId);
+  const value = context?.sourceSettings ?? null;
+
+  if (!value) {
+    settingsCache.delete(userId);
+    return null;
+  }
+
+  settingsCache.set(userId, { value, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS });
 
   return value;
 }
@@ -88,35 +99,60 @@ export async function getActiveSourceSettings() {
 export type ValidatedSourceSettings = Awaited<ReturnType<typeof validateSourceSettings>>;
 
 /**
- * Stores the active source settings. Re-saving the same spreadsheet updates the
- * existing row instead of violating the unique constraint on spreadsheetId.
+ * Source settings for the browser. The Apps Script secret never leaves the
+ * server; the UI only needs to know whether one is stored.
  */
-export async function saveSourceSettings(input: ValidatedSourceSettings) {
-  const saved = await prisma.$transaction(async (tx) => {
-    await tx.sourceSettings.updateMany({
-      where: { isActive: true, NOT: { spreadsheetId: input.spreadsheetId } },
-      data: { isActive: false },
-    });
+export function toPublicSourceSettings(settings: SourceSettings) {
+  const { appsScriptSecretEncrypted, ...rest } = settings;
 
-    return tx.sourceSettings.upsert({
-      where: { spreadsheetId: input.spreadsheetId },
-      create: {
-        partyName: input.partyName,
-        spreadsheetId: input.spreadsheetId,
-        responseSheetName: input.responseSheetName,
-        operatingStatusSheetName: input.operatingStatusSheetName,
-        isActive: true,
-      },
-      update: {
-        partyName: input.partyName,
-        responseSheetName: input.responseSheetName,
-        operatingStatusSheetName: input.operatingStatusSheetName,
-        isActive: true,
-      },
-    });
+  return {
+    ...rest,
+    hasAppsScriptSecret: Boolean(appsScriptSecretEncrypted),
+  };
+}
+
+/**
+ * Stores the caller's workspace settings. The first save also creates the
+ * workspace. Only the workspace owner may change the connection, and a
+ * spreadsheet cannot be claimed by two workspaces.
+ */
+export async function saveSourceSettings(userId: string, input: ValidatedSourceSettings) {
+  const context = await getWorkspaceContext(userId);
+
+  if (context && context.role !== 'OWNER') {
+    throw new Error('워크스페이스 소유자만 Sheets 설정을 변경할 수 있습니다.');
+  }
+
+  const claimed = await prisma.sourceSettings.findUnique({
+    where: { spreadsheetId: input.spreadsheetId },
   });
 
-  invalidateActiveSourceSettingsCache();
+  const workspace = context?.workspace ?? (await ensureOwnedWorkspace(userId, input.partyName));
+
+  if (claimed && claimed.workspaceId !== workspace.id) {
+    throw new Error('이 스프레드시트는 다른 워크스페이스에서 이미 사용 중입니다.');
+  }
+
+  const saved = await prisma.sourceSettings.upsert({
+    where: { workspaceId: workspace.id },
+    create: {
+      workspaceId: workspace.id,
+      partyName: input.partyName,
+      spreadsheetId: input.spreadsheetId,
+      responseSheetName: input.responseSheetName,
+      operatingStatusSheetName: input.operatingStatusSheetName,
+      isActive: true,
+    },
+    update: {
+      partyName: input.partyName,
+      spreadsheetId: input.spreadsheetId,
+      responseSheetName: input.responseSheetName,
+      operatingStatusSheetName: input.operatingStatusSheetName,
+      isActive: true,
+    },
+  });
+
+  invalidateSourceSettingsCache(userId);
 
   return saved;
 }

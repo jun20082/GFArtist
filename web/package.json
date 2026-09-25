@@ -7,7 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --import ./src/lib/test-env.ts --test --test-concurrency=1 src/lib/phone.test.ts src/lib/sheet-format.test.ts src/lib/allowed-emails.test.ts src/lib/duplicate-rows.test.ts src/lib/responses.test.ts src/lib/operating-status.test.ts src/lib/source-settings.test.ts src/lib/response-sync.test.ts src/lib/response-status.test.ts",
+    "test": "node --import tsx --import ./src/lib/test-env.ts --test --test-concurrency=1 src/lib/phone.test.ts src/lib/sheet-format.test.ts src/lib/allowed-emails.test.ts src/lib/duplicate-rows.test.ts src/lib/responses.test.ts src/lib/operating-status.test.ts src/lib/source-settings.test.ts src/lib/response-sync.test.ts src/lib/response-status.test.ts src/lib/workspace.test.ts",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "prisma db seed"
   },

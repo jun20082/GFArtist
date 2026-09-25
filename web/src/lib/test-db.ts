@@ -1,12 +1,22 @@
 import { prisma } from '@/lib/prisma';
+import { invalidateSourceSettingsCache } from '@/lib/source-settings';
 
 export { prisma };
 
+export const TEST_USER_ID = 'user-1';
+
 export async function resetDatabase() {
+  invalidateSourceSettingsCache();
+
+  await prisma.workspaceMember.deleteMany();
   await prisma.response.deleteMany();
   await prisma.syncRun.deleteMany();
   await prisma.sourceSettings.deleteMany();
+  await prisma.workspace.deleteMany();
   await prisma.category.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.user.deleteMany();
 }
 
 export async function seedDefaultCategories() {
@@ -20,10 +30,50 @@ export async function seedDefaultCategories() {
   });
 }
 
-export async function createSourceSettings(overrides: Partial<{ partyName: string }> = {}) {
+export async function createUser(userId: string = TEST_USER_ID) {
+  return prisma.user.upsert({
+    where: { id: userId },
+    create: { id: userId, email: `${userId}@example.com` },
+    update: {},
+  });
+}
+
+export async function addWorkspaceMember(
+  workspaceId: string,
+  userId: string,
+  role: 'OWNER' | 'OPERATOR' = 'OPERATOR',
+) {
+  await createUser(userId);
+
+  return prisma.workspaceMember.create({
+    data: { workspaceId, userId, role },
+  });
+}
+
+/**
+ * Creates an owner user, a workspace and the workspace source settings so the
+ * tests exercise the same shape as production.
+ */
+export async function createSourceSettings(
+  overrides: { partyName?: string; userId?: string } = {},
+) {
+  const userId = overrides.userId ?? TEST_USER_ID;
+  const partyName = overrides.partyName ?? '테스트 파티';
+
+  await createUser(userId);
+
+  const workspace = await prisma.workspace.create({
+    data: {
+      name: partyName,
+      ownerUserId: userId,
+      members: { create: { userId, role: 'OWNER' } },
+    },
+  });
+
   return prisma.sourceSettings.create({
     data: {
-      partyName: overrides.partyName ?? '테스트 파티',
+      workspaceId: workspace.id,
+      partyName,
       spreadsheetId: `test-sheet-${Math.random().toString(36).slice(2, 10)}`,
       responseSheetName: '설문지 응답',
       operatingStatusSheetName: '운영 상태',

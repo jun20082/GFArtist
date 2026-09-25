@@ -5,7 +5,7 @@ import { SourceSettingsForm } from '@/app/settings/source-settings-form';
 import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
 import { CleanupDuplicatesButton } from '@/app/settings/cleanup-duplicates-button';
-import { getActiveSourceSettings } from '@/lib/source-settings';
+import { getWorkspaceSourceSettings } from '@/lib/source-settings';
 import { StatusSyncState } from '@/generated/prisma/enums';
 import { prisma } from '@/lib/prisma';
 
@@ -18,11 +18,11 @@ function formatKoreaTime(value: Date) {
 export default async function SettingsPage() {
   const session = await auth();
 
-  if (!session) {
+  if (!session?.user?.id) {
     redirect('/login');
   }
 
-  const sourceSettings = await getActiveSourceSettings();
+  const sourceSettings = await getWorkspaceSourceSettings(session.user.id);
   const pendingCount = sourceSettings
     ? await prisma.response.count({
         where: {

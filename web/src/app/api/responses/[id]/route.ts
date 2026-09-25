@@ -31,7 +31,7 @@ export async function PATCH(
 
   try {
     const input = updateSchema.parse(await request.json());
-    const response = await updateResponseStatus(id, input);
+    const response = await updateResponseStatus(userId, id, input);
 
     after(async () => {
       try {

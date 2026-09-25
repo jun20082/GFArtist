@@ -1,7 +1,7 @@
 import { auth, signOut } from '@/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { getActiveSourceSettings } from '@/lib/source-settings';
+import { getWorkspaceSourceSettings } from '@/lib/source-settings';
 import { searchResponses } from '@/lib/responses';
 import { SearchClient } from '@/app/search-client';
 
@@ -14,12 +14,12 @@ export default async function Home({
 }) {
   const session = await auth();
 
-  if (!session) {
+  if (!session?.user?.id) {
     redirect('/login');
   }
 
   const params = await searchParams;
-  const sourceSettings = await getActiveSourceSettings();
+  const sourceSettings = await getWorkspaceSourceSettings(session.user.id);
   const responses = sourceSettings
     ? await searchResponses(sourceSettings.id, {
         query: params.q ?? '',

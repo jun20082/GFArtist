@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
-import { getActiveSourceSettings } from '@/lib/source-settings';
+import { getWorkspaceSourceSettings } from '@/lib/source-settings';
 import { searchResponses } from '@/lib/responses';
 
 export async function GET(request: Request) {
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const entryStatus = searchParams.get('entry') as 'NOT_ENTERED' | 'ENTERED' | null;
   const productStatus = searchParams.get('product') as 'NOT_RECEIVED' | 'RECEIVED' | null;
 
-  const sourceSettings = await getActiveSourceSettings();
+  const sourceSettings = await getWorkspaceSourceSettings(session.user.id);
 
   if (!sourceSettings) {
     return NextResponse.json({ error: 'Active source settings are missing.' }, { status: 400 });

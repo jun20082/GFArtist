@@ -3,6 +3,7 @@ import type { EntryStatus, ProductStatus } from '@/generated/prisma/enums';
 import type { SourceSettings } from '@/generated/prisma/client';
 import { getSheetsClient, quoteSheetName } from '@/lib/google-sheets';
 import { prisma } from '@/lib/prisma';
+import { getWorkspaceContext } from '@/lib/workspace';
 import {
   columnLetter,
   formatEntryStatus,
@@ -187,6 +188,18 @@ export async function syncResponseStatus(
         throw new Error('Response not found.');
       }
 
+      const membership = await tx.workspaceMember.findFirst({
+        where: {
+          userId,
+          workspaceId: response.sourceSettings.workspaceId ?? '__unassigned__',
+        },
+        select: { id: true },
+      });
+
+      if (!membership) {
+        throw new Error('Response not found.');
+      }
+
       try {
         const result = await writer(userId, response.sourceSettings, response);
 
@@ -232,7 +245,8 @@ export async function retryPendingStatusSync(
   userId: string,
   writer: OperatingStatusWriter = defaultOperatingStatusWriter,
 ) {
-  const sourceSettings = await prisma.sourceSettings.findFirst({ where: { isActive: true } });
+  const context = await getWorkspaceContext(userId);
+  const sourceSettings = context?.sourceSettings;
 
   if (!sourceSettings) {
     throw new Error('활성 파티가 없습니다.');

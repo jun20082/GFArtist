@@ -6,7 +6,7 @@ import {
   getSheetsClient,
   quoteSheetName,
 } from '@/lib/google-sheets';
-import { getActiveSourceSettings, requiredResponseHeaders } from '@/lib/source-settings';
+import { getWorkspaceSourceSettings, requiredResponseHeaders } from '@/lib/source-settings';
 import { applyResponseRows } from '@/lib/response-sync';
 
 function asText(value: unknown) {
@@ -20,7 +20,8 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const sourceSettings = await getActiveSourceSettings();
+  const userId = session.user.id;
+  const sourceSettings = await getWorkspaceSourceSettings(userId);
 
   if (!sourceSettings) {
     return NextResponse.json({ error: 'Active source settings are missing.' }, { status: 400 });
@@ -35,7 +36,7 @@ export async function POST() {
 
   try {
     await ensureAppsScriptIds();
-    const sheets = await getSheetsClient(session.user.id);
+    const sheets = await getSheetsClient(userId);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sourceSettings.spreadsheetId,
       range: `${quoteSheetName(sourceSettings.responseSheetName)}!A:Z`,
