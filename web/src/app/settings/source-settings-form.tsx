@@ -9,6 +9,18 @@ type SourceSettingsFormProps = {
   columnMapping: ColumnMapping | null;
 };
 
+type SourceSettingsResponse = {
+  error?: string;
+  sourceSettings?: {
+    nameHeader: string;
+    phoneHeader: string;
+    genderHeader: string;
+    orderedProductHeader: string;
+    internalResponseIdHeader: string;
+    hasAppsScriptSecret: boolean;
+  } | null;
+};
+
 const mappingFieldNames: (keyof ColumnMapping)[] = [
   'nameHeader',
   'phoneHeader',
@@ -16,6 +28,16 @@ const mappingFieldNames: (keyof ColumnMapping)[] = [
   'orderedProductHeader',
   'internalResponseIdHeader',
 ];
+
+function emptyMapping(): Record<keyof ColumnMapping, string> {
+  return {
+    nameHeader: '',
+    phoneHeader: '',
+    genderHeader: '',
+    orderedProductHeader: '',
+    internalResponseIdHeader: '',
+  };
+}
 
 export function SourceSettingsForm({
   appsScriptUrl,
@@ -25,6 +47,12 @@ export function SourceSettingsForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [secretStored, setSecretStored] = useState(hasAppsScriptSecret);
+  const [mapping, setMapping] = useState<Record<keyof ColumnMapping, string>>(
+    columnMapping
+      ? { ...columnMapping }
+      : emptyMapping(),
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,9 +62,6 @@ export function SourceSettingsForm({
 
     const formData = new FormData(event.currentTarget);
     const appsScriptSecret = formData.get('appsScriptSecret');
-    const mappingInputs = Object.fromEntries(
-      mappingFieldNames.map((name) => [name, formData.get(name) || undefined]),
-    );
 
     const response = await fetch('/api/source-settings', {
       method: 'POST',
@@ -47,12 +72,20 @@ export function SourceSettingsForm({
         responseSheetName: formData.get('responseSheetName'),
         operatingStatusSheetName: formData.get('operatingStatusSheetName'),
         appsScriptUrl: formData.get('appsScriptUrl'),
-        ...mappingInputs,
+        ...mappingFieldNames.reduce<Record<string, string>>((accumulator, name) => {
+          const value = mapping[name].trim();
+
+          if (value) {
+            accumulator[name] = value;
+          }
+
+          return accumulator;
+        }, {}),
         ...(appsScriptSecret ? { appsScriptSecret } : {}),
       }),
     });
 
-    const result = (await response.json()) as { error?: string };
+    const result = (await response.json()) as SourceSettingsResponse;
     setIsSubmitting(false);
 
     if (!response.ok) {
@@ -60,7 +93,18 @@ export function SourceSettingsForm({
       return;
     }
 
-    setMessage('Google Sheets 연결이 저장되었습니다.');
+    if (result.sourceSettings) {
+      setMapping({
+        nameHeader: result.sourceSettings.nameHeader,
+        phoneHeader: result.sourceSettings.phoneHeader,
+        genderHeader: result.sourceSettings.genderHeader,
+        orderedProductHeader: result.sourceSettings.orderedProductHeader,
+        internalResponseIdHeader: result.sourceSettings.internalResponseIdHeader,
+      });
+      setSecretStored(result.sourceSettings.hasAppsScriptSecret);
+    }
+
+    setMessage('Google Sheets 연결이 저장되었습니다. 아래 컬럼 매핑이 실제 적용값입니다.');
   }
 
   return (
@@ -111,8 +155,8 @@ export function SourceSettingsForm({
       <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
         <p className="text-xs leading-5 text-slate-400">
           컬럼 매핑. 비워 두면 시트 헤더를 자동으로 인식합니다(이름/성명, 전화번호/연락처,
-          주문 상품/주문상품 등). 자동 인식에 실패하거나 직접 지정하려면 시트의 헤더 이름을 그대로
-          입력하세요.
+          주문 상품/주문상품 등). 직접 입력한 이름이 시트에 없으면 저장이 거부되고, 시트 헤더
+          목록과 함께 안내됩니다.
         </p>
 
         {mappingFieldNames.map((name) => (
@@ -120,9 +164,12 @@ export function SourceSettingsForm({
             {columnMappingLabels[name]}
             <input
               className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
-              defaultValue={columnMapping?.[name] ?? ''}
               name={name}
+              onChange={(event) =>
+                setMapping((current) => ({ ...current, [name]: event.target.value }))
+              }
               placeholder="자동 인식"
+              value={mapping[name]}
             />
           </label>
         ))}
@@ -148,7 +195,7 @@ export function SourceSettingsForm({
         <label className="block text-sm text-slate-200">
           Apps Script Secret{' '}
           <span className="text-xs text-slate-400">
-            {hasAppsScriptSecret ? '(저장됨 — 새 값을 입력하면 교체)' : '(미설정)'}
+            {secretStored ? '(저장됨 — 새 값을 입력하면 교체)' : '(미설정)'}
           </span>
           <input
             autoComplete="off"

@@ -58,6 +58,45 @@ describe('resolveColumnMapping', () => {
     assert.equal(mapping.orderedProductHeader, '상품');
   });
 
+  test('시트에 없는 컬럼을 지정하면 조용히 대체하지 않고 거부한다', () => {
+    const headers = ['이름', '전화번호', '성별', '주문 상품', '_internal_response_id'];
+
+    assert.throws(
+      () => resolveColumnMapping(headers, { nameHeader: 'name' }),
+      (error: unknown) =>
+        error instanceof ColumnMappingError &&
+        /지정한 컬럼을 시트에서 찾지 못했습니다: 이름\(name\)/.test(error.message) &&
+        /자동 인식하려면 해당 칸을 비우세요/.test(error.message) &&
+        /시트 헤더: 이름, 전화번호, 성별, 주문 상품, _internal_response_id/.test(error.message),
+    );
+  });
+
+  test('잘못 지정한 칸과 자동 인식 실패 칸을 함께 알려준다', () => {
+    const headers = ['이름', '_internal_response_id'];
+
+    assert.throws(
+      () => resolveColumnMapping(headers, { nameHeader: 'name' }),
+      (error: unknown) =>
+        error instanceof ColumnMappingError &&
+        /지정한 컬럼을 시트에서 찾지 못했습니다: 이름\(name\)/.test(error.message) &&
+        /다음 항목의 컬럼을 찾지 못했습니다: 전화번호, 성별, 주문 상품/.test(error.message),
+    );
+  });
+
+  test('칸을 비우면 자동 인식을 유지한다', () => {
+    const headers = ['이름', '연락처', '성별', '상품', '_internal_response_id'];
+
+    const mapping = resolveColumnMapping(headers, { nameHeader: '   ' });
+
+    assert.deepEqual(mapping, {
+      nameHeader: '이름',
+      phoneHeader: '연락처',
+      genderHeader: '성별',
+      orderedProductHeader: '상품',
+      internalResponseIdHeader: '_internal_response_id',
+    });
+  });
+
   test('찾지 못한 항목을 모두 알려준다', () => {
     const headers = ['이름', '비고'];
 

@@ -48,9 +48,9 @@ function normalize(value: string) {
 }
 
 /**
- * Resolves the sheet headers for each field. An explicit preference wins when
- * it exists in the sheet; otherwise the first matching alias is used. Failing
- * loudly beats storing personal data in the wrong column.
+ * Resolves the sheet headers for each field. An empty field uses the first
+ * matching alias. A field the manager typed explicitly must exist in the sheet:
+ * silently swapping a typo for another column would hide the mistake.
  */
 export function resolveColumnMapping(
   headers: string[],
@@ -58,34 +58,53 @@ export function resolveColumnMapping(
 ): ColumnMapping {
   const normalizedHeaders = new Map(headers.map((header) => [normalize(header), header]));
   const resolved = {} as ColumnMapping;
+  const unknown: string[] = [];
   const missing: string[] = [];
 
   for (const key of mappingKeys) {
-    const preferredValue = preferred[key];
+    const preferredValue = preferred[key]?.trim();
 
-    if (preferredValue && normalizedHeaders.has(normalize(preferredValue))) {
-      resolved[key] = normalizedHeaders.get(normalize(preferredValue)) as string;
+    if (preferredValue) {
+      const matched = normalizedHeaders.get(normalize(preferredValue));
+
+      if (matched) {
+        resolved[key] = matched;
+      } else {
+        unknown.push(`${columnMappingLabels[key]}(${preferredValue})`);
+      }
+
       continue;
     }
 
-    const matched = columnAliases[key]
+    const aliasMatch = columnAliases[key]
       .map((alias) => normalizedHeaders.get(normalize(alias)))
       .find((header): header is string => Boolean(header));
 
-    if (matched) {
-      resolved[key] = matched;
+    if (aliasMatch) {
+      resolved[key] = aliasMatch;
       continue;
     }
 
     missing.push(columnMappingLabels[key]);
   }
 
-  if (missing.length > 0) {
-    throw new ColumnMappingError(
-      `다음 항목의 컬럼을 찾지 못했습니다: ${missing.join(', ')}. ` +
-        `시트 헤더: ${headers.filter(Boolean).join(', ') || '(없음)'}. ` +
-        'Sheets 설정에서 컬럼 이름을 직접 지정하세요.',
-    );
+  if (unknown.length > 0 || missing.length > 0) {
+    const reasons: string[] = [];
+
+    if (unknown.length > 0) {
+      reasons.push(
+        `지정한 컬럼을 시트에서 찾지 못했습니다: ${unknown.join(', ')}. ` +
+          '자동 인식하려면 해당 칸을 비우세요.',
+      );
+    }
+
+    if (missing.length > 0) {
+      reasons.push(`다음 항목의 컬럼을 찾지 못했습니다: ${missing.join(', ')}.`);
+    }
+
+    reasons.push(`시트 헤더: ${headers.filter(Boolean).join(', ') || '(없음)'}`);
+
+    throw new ColumnMappingError(reasons.join(' '));
   }
 
   return resolved;
