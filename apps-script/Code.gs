@@ -1,5 +1,4 @@
 const INTERNAL_ID_HEADER = '_internal_response_id';
-const REQUIRED_RESPONSE_HEADERS = ['이름', '전화번호', '성별', '주문 상품'];
 const SOURCE_SPREADSHEET_ID_PROPERTY = 'SOURCE_SPREADSHEET_ID';
 const RESPONSE_SHEET_NAME_PROPERTY = 'RESPONSE_SHEET_NAME';
 const WEB_APP_SECRET_PROPERTY = 'WEB_APP_SECRET';
@@ -110,16 +109,13 @@ function ensureInternalResponseIds_() {
   };
 }
 
+/**
+ * Ensures the system column exists. Response columns are mapped by the web app
+ * settings, so this script never requires specific respondent headers.
+ */
 function ensureResponseHeaders_(sheet) {
   const lastColumn = Math.max(sheet.getLastColumn(), 1);
   const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
-  const missingHeaders = REQUIRED_RESPONSE_HEADERS.filter(
-    (header) => !headers.includes(header),
-  );
-
-  if (missingHeaders.length > 0) {
-    throw new Error(`Missing required response headers: ${missingHeaders.join(', ')}`);
-  }
 
   const existingIdIndex = headers.indexOf(INTERNAL_ID_HEADER);
   if (existingIdIndex >= 0) {

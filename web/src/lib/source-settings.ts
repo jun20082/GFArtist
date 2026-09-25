@@ -4,6 +4,7 @@ import type { SourceSettings } from '@/generated/prisma/client';
 import { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
 import { ensureOwnedWorkspace, getWorkspaceContext } from '@/lib/workspace';
 import { encryptSecret } from '@/lib/secret-box';
+import { resolveColumnMapping } from '@/lib/column-mapping';
 
 export const sourceSettingsInput = z.object({
   partyName: z.string().trim().min(1).max(120),
@@ -12,15 +13,12 @@ export const sourceSettingsInput = z.object({
   operatingStatusSheetName: z.string().trim().min(1).max(200),
   appsScriptUrl: z.string().trim().optional(),
   appsScriptSecret: z.string().optional(),
+  nameHeader: z.string().trim().optional(),
+  phoneHeader: z.string().trim().optional(),
+  genderHeader: z.string().trim().optional(),
+  orderedProductHeader: z.string().trim().optional(),
+  internalResponseIdHeader: z.string().trim().optional(),
 });
-
-export const requiredResponseHeaders = [
-  '이름',
-  '전화번호',
-  '성별',
-  '주문 상품',
-  '_internal_response_id',
-] as const;
 
 export async function validateSourceSettings(
   userId: string,
@@ -53,17 +51,19 @@ export async function validateSourceSettings(
     range: `${quoteSheetName(input.responseSheetName)}!1:1`,
   });
   const headers = (headerResponse.data.values?.[0] ?? []).map((value) => String(value).trim());
-  const missingHeaders = requiredResponseHeaders.filter((header) => !headers.includes(header));
-
-  if (missingHeaders.length > 0) {
-    throw new Error(`Missing response headers: ${missingHeaders.join(', ')}`);
-  }
+  const mapping = resolveColumnMapping(headers, {
+    nameHeader: input.nameHeader,
+    phoneHeader: input.phoneHeader,
+    genderHeader: input.genderHeader,
+    orderedProductHeader: input.orderedProductHeader,
+    internalResponseIdHeader: input.internalResponseIdHeader,
+  });
 
   if (input.appsScriptUrl && !input.appsScriptUrl.endsWith('/exec')) {
     throw new Error('Apps Script Web App URL must end with /exec.');
   }
 
-  return { ...input, spreadsheetId };
+  return { ...input, spreadsheetId, mapping };
 }
 
 const SETTINGS_CACHE_TTL_MS = 5_000;
@@ -141,6 +141,7 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
   }
 
   const secretChanges = buildSecretChanges(input.appsScriptSecret);
+  const mapping = input.mapping;
 
   const saved = await prisma.sourceSettings.upsert({
     where: { workspaceId: workspace.id },
@@ -152,6 +153,7 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
       operatingStatusSheetName: input.operatingStatusSheetName,
       appsScriptUrl: input.appsScriptUrl || null,
       appsScriptSecretEncrypted: secretChanges.encrypted ?? null,
+      ...mapping,
       isActive: true,
     },
     update: {
@@ -161,6 +163,7 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
       operatingStatusSheetName: input.operatingStatusSheetName,
       ...(input.appsScriptUrl === undefined ? {} : { appsScriptUrl: input.appsScriptUrl || null }),
       ...secretChanges.changes,
+      ...mapping,
       isActive: true,
     },
   });

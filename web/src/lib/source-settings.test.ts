@@ -1,6 +1,7 @@
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { saveSourceSettings, toPublicSourceSettings, type ValidatedSourceSettings } from './source-settings';
+import { defaultColumnMapping } from './column-mapping';
 import {
   addWorkspaceMember,
   createResponse,
@@ -21,6 +22,7 @@ function buildSettings(
     spreadsheetId: 'sheet-1',
     responseSheetName: '설문지 응답',
     operatingStatusSheetName: '운영 상태',
+    mapping: defaultColumnMapping,
     ...overrides,
   };
 }

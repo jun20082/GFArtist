@@ -83,6 +83,17 @@ export default async function SettingsPage() {
           <SourceSettingsForm
             appsScriptUrl={sourceSettings?.appsScriptUrl ?? null}
             hasAppsScriptSecret={Boolean(sourceSettings?.appsScriptSecretEncrypted)}
+            columnMapping={
+              sourceSettings
+                ? {
+                    nameHeader: sourceSettings.nameHeader,
+                    phoneHeader: sourceSettings.phoneHeader,
+                    genderHeader: sourceSettings.genderHeader,
+                    orderedProductHeader: sourceSettings.orderedProductHeader,
+                    internalResponseIdHeader: sourceSettings.internalResponseIdHeader,
+                  }
+                : null
+            }
           />
         </div>
         <div className="mt-6">

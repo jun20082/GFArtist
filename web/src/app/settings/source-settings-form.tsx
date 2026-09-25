@@ -1,15 +1,26 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import { columnMappingLabels, type ColumnMapping } from '@/lib/column-mapping';
 
 type SourceSettingsFormProps = {
   appsScriptUrl: string | null;
   hasAppsScriptSecret: boolean;
+  columnMapping: ColumnMapping | null;
 };
+
+const mappingFieldNames: (keyof ColumnMapping)[] = [
+  'nameHeader',
+  'phoneHeader',
+  'genderHeader',
+  'orderedProductHeader',
+  'internalResponseIdHeader',
+];
 
 export function SourceSettingsForm({
   appsScriptUrl,
   hasAppsScriptSecret,
+  columnMapping,
 }: SourceSettingsFormProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +34,10 @@ export function SourceSettingsForm({
 
     const formData = new FormData(event.currentTarget);
     const appsScriptSecret = formData.get('appsScriptSecret');
+    const mappingInputs = Object.fromEntries(
+      mappingFieldNames.map((name) => [name, formData.get(name) || undefined]),
+    );
+
     const response = await fetch('/api/source-settings', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -32,6 +47,7 @@ export function SourceSettingsForm({
         responseSheetName: formData.get('responseSheetName'),
         operatingStatusSheetName: formData.get('operatingStatusSheetName'),
         appsScriptUrl: formData.get('appsScriptUrl'),
+        ...mappingInputs,
         ...(appsScriptSecret ? { appsScriptSecret } : {}),
       }),
     });
@@ -91,6 +107,26 @@ export function SourceSettingsForm({
           required
         />
       </label>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+        <p className="text-xs leading-5 text-slate-400">
+          컬럼 매핑. 비워 두면 시트 헤더를 자동으로 인식합니다(이름/성명, 전화번호/연락처,
+          주문 상품/주문상품 등). 자동 인식에 실패하거나 직접 지정하려면 시트의 헤더 이름을 그대로
+          입력하세요.
+        </p>
+
+        {mappingFieldNames.map((name) => (
+          <label className="block text-sm text-slate-200" key={name}>
+            {columnMappingLabels[name]}
+            <input
+              className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+              defaultValue={columnMapping?.[name] ?? ''}
+              name={name}
+              placeholder="자동 인식"
+            />
+          </label>
+        ))}
+      </div>
 
       <div className="space-y-5 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
         <p className="text-xs leading-5 text-slate-400">
