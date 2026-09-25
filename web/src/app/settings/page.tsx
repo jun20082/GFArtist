@@ -80,7 +80,10 @@ export default async function SettingsPage() {
           </dl>
         ) : null}
         <div className="mt-8">
-          <SourceSettingsForm />
+          <SourceSettingsForm
+            appsScriptUrl={sourceSettings?.appsScriptUrl ?? null}
+            hasAppsScriptSecret={Boolean(sourceSettings?.appsScriptSecretEncrypted)}
+          />
         </div>
         <div className="mt-6">
           <SyncResponsesButton />

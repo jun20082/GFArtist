@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { prisma } from '@/lib/prisma';
+import { decryptSecret } from '@/lib/secret-box';
 
 type SheetsClient = ReturnType<typeof google.sheets>;
 
@@ -105,17 +106,48 @@ export async function getSheetsClient(userId: string) {
 
 export { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
 
-export async function ensureAppsScriptIds() {
-  const url = process.env.GOOGLE_APPS_SCRIPT_URL;
-  const secret = process.env.GOOGLE_APPS_SCRIPT_SECRET;
+type AppsScriptConfig = {
+  appsScriptUrl?: string | null;
+  appsScriptSecretEncrypted?: string | null;
+};
+
+/**
+ * Ensures the source sheet has internal response ids by calling the Apps
+ * Script Web App of the workspace. Workspaces that never stored their own Web
+ * App fall back to the GOOGLE_APPS_SCRIPT_URL and GOOGLE_APPS_SCRIPT_SECRET
+ * environment variables.
+ */
+export async function ensureAppsScriptIds(sourceSettings: AppsScriptConfig) {
+  const url = sourceSettings.appsScriptUrl ?? process.env.GOOGLE_APPS_SCRIPT_URL;
+  let secret: string | null = null;
+
+  if (sourceSettings.appsScriptUrl) {
+    if (!sourceSettings.appsScriptSecretEncrypted) {
+      throw new Error(
+        '이 워크스페이스에는 Apps Script Secret이 저장되어 있지 않습니다. Sheets 설정에서 Secret을 입력하세요.',
+      );
+    }
+
+    const key = process.env.APP_ENCRYPTION_KEY;
+
+    if (!key) {
+      throw new Error('APP_ENCRYPTION_KEY is not configured.');
+    }
+
+    secret = decryptSecret(sourceSettings.appsScriptSecretEncrypted, key);
+  } else {
+    secret = process.env.GOOGLE_APPS_SCRIPT_SECRET ?? null;
+  }
 
   if (!url || !secret) {
-    throw new Error('Apps Script Web App configuration is missing.');
+    throw new Error(
+      'Apps Script Web App 구성이 없습니다. Sheets 설정에서 Web App URL과 Secret을 입력하세요.',
+    );
   }
 
   if (!url.endsWith('/exec')) {
     throw new Error(
-      `GOOGLE_APPS_SCRIPT_URL must be the deployed Web App URL ending with /exec. Current value: ${url}`,
+      `Apps Script Web App URL must end with /exec. Current value: ${url}`,
     );
   }
 
@@ -129,7 +161,7 @@ export async function ensureAppsScriptIds() {
   if (!response.ok) {
     throw new Error(
       `Apps Script request failed with status ${response.status}. Target: ${url}. ` +
-        'Check that GOOGLE_APPS_SCRIPT_URL points at the current Web App deployment.',
+        'Check that the Web App URL points at the current deployment.',
     );
   }
 

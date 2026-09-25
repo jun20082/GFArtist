@@ -35,7 +35,7 @@ export async function POST() {
   });
 
   try {
-    await ensureAppsScriptIds();
+    await ensureAppsScriptIds(sourceSettings);
     const sheets = await getSheetsClient(userId);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sourceSettings.spreadsheetId,

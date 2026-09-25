@@ -1,6 +1,6 @@
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { saveSourceSettings, type ValidatedSourceSettings } from './source-settings';
+import { saveSourceSettings, toPublicSourceSettings, type ValidatedSourceSettings } from './source-settings';
 import {
   addWorkspaceMember,
   createResponse,
@@ -129,5 +129,60 @@ describe('saveSourceSettings', () => {
     assert.notEqual(first.workspaceId, second.workspaceId);
     assert.equal(await prisma.sourceSettings.count(), 2);
     assert.equal(await prisma.workspace.count(), 2);
+  });
+
+  test('Apps Script Secret을 암호화해 저장하고 평문을 남기지 않는다', async () => {
+    await resetWithUsers(TEST_USER_ID);
+    process.env.APP_ENCRYPTION_KEY = 'a'.repeat(64);
+
+    try {
+      const saved = await saveSourceSettings(
+        TEST_USER_ID,
+        buildSettings({
+          appsScriptUrl: 'https://script.google.com/macros/s/example/exec',
+          appsScriptSecret: 'plain-secret',
+        }),
+      );
+
+      assert.equal(saved.appsScriptUrl, 'https://script.google.com/macros/s/example/exec');
+      assert.notEqual(saved.appsScriptSecretEncrypted, 'plain-secret');
+      assert.match(String(saved.appsScriptSecretEncrypted), /^[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+$/);
+
+      const publicView = toPublicSourceSettings(saved);
+      assert.equal('appsScriptSecretEncrypted' in publicView, false);
+      assert.equal(publicView.hasAppsScriptSecret, true);
+    } finally {
+      delete process.env.APP_ENCRYPTION_KEY;
+    }
+  });
+
+  test('Secret을 비워 두면 기존 저장값을 유지한다', async () => {
+    await resetWithUsers(TEST_USER_ID);
+    process.env.APP_ENCRYPTION_KEY = 'a'.repeat(64);
+
+    try {
+      const first = await saveSourceSettings(
+        TEST_USER_ID,
+        buildSettings({ appsScriptSecret: 'plain-secret' }),
+      );
+      const second = await saveSourceSettings(
+        TEST_USER_ID,
+        buildSettings({ spreadsheetId: 'sheet-2' }),
+      );
+
+      assert.equal(second.appsScriptSecretEncrypted, first.appsScriptSecretEncrypted);
+    } finally {
+      delete process.env.APP_ENCRYPTION_KEY;
+    }
+  });
+
+  test('APP_ENCRYPTION_KEY 없이 Secret을 저장하면 안내 오류를 던진다', async () => {
+    await resetWithUsers(TEST_USER_ID);
+    delete process.env.APP_ENCRYPTION_KEY;
+
+    await assert.rejects(
+      () => saveSourceSettings(TEST_USER_ID, buildSettings({ appsScriptSecret: 'plain' })),
+      /APP_ENCRYPTION_KEY is not configured/,
+    );
   });
 });

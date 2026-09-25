@@ -2,7 +2,15 @@
 
 import { FormEvent, useState } from 'react';
 
-export function SourceSettingsForm() {
+type SourceSettingsFormProps = {
+  appsScriptUrl: string | null;
+  hasAppsScriptSecret: boolean;
+};
+
+export function SourceSettingsForm({
+  appsScriptUrl,
+  hasAppsScriptSecret,
+}: SourceSettingsFormProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -14,6 +22,7 @@ export function SourceSettingsForm() {
     setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
+    const appsScriptSecret = formData.get('appsScriptSecret');
     const response = await fetch('/api/source-settings', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -22,6 +31,8 @@ export function SourceSettingsForm() {
         spreadsheetUrlOrId: formData.get('spreadsheetUrlOrId'),
         responseSheetName: formData.get('responseSheetName'),
         operatingStatusSheetName: formData.get('operatingStatusSheetName'),
+        appsScriptUrl: formData.get('appsScriptUrl'),
+        ...(appsScriptSecret ? { appsScriptSecret } : {}),
       }),
     });
 
@@ -80,6 +91,38 @@ export function SourceSettingsForm() {
           required
         />
       </label>
+
+      <div className="space-y-5 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+        <p className="text-xs leading-5 text-slate-400">
+          Apps Script Web App 설정 (선택). 각 파티의 Web App URL과 Secret을 저장하면 이 파티에만
+          사용됩니다. 비워 두면 서버 환경변수(GOOGLE_APPS_SCRIPT_URL)를 사용합니다.
+        </p>
+
+        <label className="block text-sm text-slate-200">
+          Apps Script Web App URL
+          <input
+            className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+            defaultValue={appsScriptUrl ?? ''}
+            name="appsScriptUrl"
+            placeholder="https://script.google.com/macros/s/.../exec"
+            type="url"
+          />
+        </label>
+
+        <label className="block text-sm text-slate-200">
+          Apps Script Secret{' '}
+          <span className="text-xs text-slate-400">
+            {hasAppsScriptSecret ? '(저장됨 — 새 값을 입력하면 교체)' : '(미설정)'}
+          </span>
+          <input
+            autoComplete="off"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+            name="appsScriptSecret"
+            placeholder="Web App과 공유한 Secret"
+            type="password"
+          />
+        </label>
+      </div>
 
       <button
         className="w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"

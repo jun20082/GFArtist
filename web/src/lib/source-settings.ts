@@ -3,12 +3,15 @@ import { prisma } from '@/lib/prisma';
 import type { SourceSettings } from '@/generated/prisma/client';
 import { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
 import { ensureOwnedWorkspace, getWorkspaceContext } from '@/lib/workspace';
+import { encryptSecret } from '@/lib/secret-box';
 
 export const sourceSettingsInput = z.object({
   partyName: z.string().trim().min(1).max(120),
   spreadsheetUrlOrId: z.string().trim().min(1),
   responseSheetName: z.string().trim().min(1).max(200),
   operatingStatusSheetName: z.string().trim().min(1).max(200),
+  appsScriptUrl: z.string().trim().optional(),
+  appsScriptSecret: z.string().optional(),
 });
 
 export const requiredResponseHeaders = [
@@ -54,6 +57,10 @@ export async function validateSourceSettings(
 
   if (missingHeaders.length > 0) {
     throw new Error(`Missing response headers: ${missingHeaders.join(', ')}`);
+  }
+
+  if (input.appsScriptUrl && !input.appsScriptUrl.endsWith('/exec')) {
+    throw new Error('Apps Script Web App URL must end with /exec.');
   }
 
   return { ...input, spreadsheetId };
@@ -133,6 +140,8 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
     throw new Error('이 스프레드시트는 다른 워크스페이스에서 이미 사용 중입니다.');
   }
 
+  const secretChanges = buildSecretChanges(input.appsScriptSecret);
+
   const saved = await prisma.sourceSettings.upsert({
     where: { workspaceId: workspace.id },
     create: {
@@ -141,6 +150,8 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
       spreadsheetId: input.spreadsheetId,
       responseSheetName: input.responseSheetName,
       operatingStatusSheetName: input.operatingStatusSheetName,
+      appsScriptUrl: input.appsScriptUrl || null,
+      appsScriptSecretEncrypted: secretChanges.encrypted ?? null,
       isActive: true,
     },
     update: {
@@ -148,6 +159,8 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
       spreadsheetId: input.spreadsheetId,
       responseSheetName: input.responseSheetName,
       operatingStatusSheetName: input.operatingStatusSheetName,
+      ...(input.appsScriptUrl === undefined ? {} : { appsScriptUrl: input.appsScriptUrl || null }),
+      ...secretChanges.changes,
       isActive: true,
     },
   });
@@ -155,4 +168,29 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
   invalidateSourceSettingsCache(userId);
 
   return saved;
+}
+
+function buildSecretChanges(appsScriptSecret: string | undefined) {
+  if (appsScriptSecret === undefined) {
+    return { changes: {}, encrypted: undefined };
+  }
+
+  if (appsScriptSecret.length === 0) {
+    return { changes: { appsScriptSecretEncrypted: null }, encrypted: null };
+  }
+
+  const key = process.env.APP_ENCRYPTION_KEY;
+
+  if (!key) {
+    throw new Error(
+      'APP_ENCRYPTION_KEY is not configured. Generate a key and add it to the environment before storing the Apps Script Secret.',
+    );
+  }
+
+  const encrypted = encryptSecret(appsScriptSecret, key);
+
+  return {
+    changes: { appsScriptSecretEncrypted: encrypted },
+    encrypted,
+  };
 }
