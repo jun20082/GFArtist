@@ -68,18 +68,17 @@ Google Forms 응답 조회 시스템의 개발 시작부터 MVP 배포까지 필
 3. Google Sheets API 활성화
 4. 테스트용 응답 Google Sheets 생성
 5. 원본 응답 Spreadsheet에 `운영 상태` 탭 생성
-6. Google Apps Script 프로젝트 생성
-7. Apps Script Web App 배포
-8. 기존 응답 ID 일괄 생성 테스트
-9. 신규 응답 제출 시 ID 자동 생성 테스트
-10. 운영 상태 Sheet에 상태 기록 테스트
+6. 서버가 `_internal_response_id` 컬럼을 생성·기록하는 흐름 구현
+7. 기존 응답 ID 일괄 생성 테스트 (동기화 시 빈 ID 채우기)
+8. 신규 응답이 동기화 시 ID를 부여받는지 테스트
+9. 운영 상태 Sheet에 상태 기록 테스트
 
 #### 검증해야 할 핵심 흐름
 
 ```text
 기존 Google Sheets 연결
         ↓
-기존 응답에 _internal_response_id 자동 생성
+동기화 시 _internal_response_id 자동 생성 (기존·신규 응답)
         ↓
 웹사이트에서 응답 읽기
         ↓
@@ -90,8 +89,8 @@ Google Forms 응답 조회 시스템의 개발 시작부터 MVP 배포까지 필
 
 #### 완료 기준
 
-- 기존 응답에 ID가 자동 생성된다.
-- 신규 응답에 ID가 자동 생성된다.
+- ID가 없는 기존 응답에 동기화 시 ID가 자동 생성된다.
+- 신규 응답도 동기화 시 ID를 부여받는다.
 - 이름이나 전화번호가 변경되어도 ID가 유지된다.
 - 웹사이트가 원본 응답을 읽을 수 있다.
 - 웹사이트가 운영 상태 Sheet를 갱신할 수 있다.
@@ -173,8 +172,6 @@ DATABASE_URL
 AUTH_GOOGLE_ID
 AUTH_GOOGLE_SECRET
 GOOGLE_ALLOWED_EMAILS
-GOOGLE_APPS_SCRIPT_URL
-GOOGLE_APPS_SCRIPT_SECRET
 ```
 
 ### P1. 데이터베이스 설계 및 구현
@@ -289,33 +286,28 @@ GOOGLE_APPS_SCRIPT_SECRET
 - 여러 파티 목록 관리
 - 과거 파티 전환
 
-### P1. Apps Script 내부 ID 기능
+### P1. 서버 내부 ID 관리
 
-예상 시간: **2~4일**
+예상 시간: **1~2일**
 
-#### 기존 응답 처리
+`_internal_response_id` 는 웹사이트 서버가 로그인한 관리자의 Google 권한으로 생성·기록합니다. Google Apps Script 는 사용하지 않습니다.
 
-1. `_internal_response_id` 컬럼 확인
-2. 컬럼이 없으면 추가
-3. ID가 없는 기존 행 검색
-4. 각 행에 고유 ID 생성
-5. ID 컬럼 보호
-6. 처리 결과 반환
+#### 동기화 시 처리
 
-#### 신규 응답 처리
+1. 원본 응답 탭 헤더 확인
+2. `_internal_response_id` 컬럼이 없으면 헤더에 추가
+3. ID가 없는 행 탐지 (이름 또는 전화번호가 있는 행)
+4. 각 행에 고유 ID 생성 (`resp_<uuid>`)
+5. ID 컬럼을 한 번에 기록
+6. 생성된 ID를 기준으로 데이터베이스 upsert
 
-1. Google Form 제출 이벤트 감지
-2. 새 응답 행 확인
-3. 내부 ID 생성
-4. `_internal_response_id`에 기록
-5. 웹사이트 동기화 시 해당 ID 사용
+#### 규칙
 
-#### 보완 처리
-
-- ID가 누락된 응답 자동 탐지
-- 누락 ID 자동 생성
-- ID 중복 여부 검사
-- Apps Script 오류 로그 기록
+- 기존 ID는 변경하지 않는다.
+- 응답자가 입력한 필드는 수정하지 않는다. 서버가 기록하는 항목은 시스템 컬럼 하나뿐이다.
+- 같은 워크스페이스의 동기화가 동시에 실행되지 않도록 직렬화한다.
+- ID 기록에 실패하면 동기화를 실패로 기록하고 다음 동기화에서 다시 시도한다.
+- 신규 응답의 ID는 제출 즉시가 아니라 다음 동기화 시 생성된다.
 
 ### P1. 응답 데이터 수동 동기화
 
@@ -446,7 +438,7 @@ _internal_response_id로 운영 상태 행 검색
 - 잘못된 Sheet URL
 - 접근 권한 없음
 - 필수 컬럼 누락
-- Apps Script 호출 실패
+- 원본 응답 탭 쓰기 권한 없음 (ID 컬럼 기록 실패)
 - Google API 오류
 - 동기화 중복 실행
 - 운영 상태 Sheet 기록 실패
@@ -459,8 +451,7 @@ _internal_response_id로 운영 상태 행 검색
 - 허용된 Google 계정만 접근
 - OAuth 토큰 서버 보관
 - 환경변수로 비밀키 관리
-- 내부 ID 컬럼 보호
-- 원본 응답 Sheet는 웹사이트에서 읽기 전용
+- 내부 ID 컬럼은 서버만 기록하고, 응답자 입력 필드는 읽기 전용
 - 운영 상태 Sheet 기록은 서버 API에서만 실행
 - 개인정보를 브라우저 로컬 저장소에 저장하지 않음
 
@@ -505,13 +496,12 @@ _internal_response_id로 운영 상태 행 검색
 1. 운영 PostgreSQL 생성
 2. 운영 환경변수 등록
 3. Google OAuth redirect URI 등록
-4. Google Apps Script 운영 배포
-5. 운영 도메인 연결
-6. HTTPS 확인
-7. 허용 관리자 계정 등록
-8. 실제 Google Sheets 연결
-9. 최초 동기화 실행
-10. 운영 상태 Sheet 동기화 확인
+4. 운영 도메인 연결
+5. HTTPS 확인
+6. 허용 관리자 계정 등록
+7. 실제 Google Sheets 연결
+8. 최초 동기화 실행
+9. 운영 상태 Sheet 동기화 확인
 
 #### 배포 후 확인
 
@@ -532,10 +522,10 @@ _internal_response_id로 운영 상태 행 검색
 |---|---:|
 | 기술 검증 및 결정 | 1~2일 |
 | 프로젝트·DB·OAuth | 3~5일 |
-| Apps Script 및 동기화 | 4~7일 |
+| 내부 ID 및 Sheets 동기화 | 3~5일 |
 | 검색·상세·상태 화면 | 4~6일 |
 | 테스트·보안·배포 | 4~7일 |
-| **총합** | **16~27일** |
+| **총합** | **15~25일** |
 
 ### 입문 개발자 기준
 
@@ -543,7 +533,7 @@ _internal_response_id로 운영 상태 행 검색
 - 주 20시간 개발: 약 **6~9주**
 - 주 40시간 개발: 약 **4~7주**
 
-Google OAuth와 Apps Script 연동에서 문제가 생기면 추가로 **3~7일**이 필요할 수 있습니다.
+Google OAuth 연동에서 문제가 생기면 추가로 **3~7일**이 필요할 수 있습니다.
 
 ---
 
@@ -585,4 +575,4 @@ Next.js + TypeScript + PostgreSQL + Prisma
 
 운영 상태 Sheet 동기화 실패 시에는 DB 상태를 유지하고, 실패 상태와 오류 내용을 저장하여 재시도할 수 있도록 합니다.
 
-현재 가장 먼저 할 작업은 **샘플 Google Sheets를 대상으로 Apps Script Web App의 기존 ID 일괄 생성과 신규 ID 자동 생성을 검증하는 것**입니다.
+현재 가장 먼저 할 작업은 **샘플 Google Sheets를 대상으로 서버가 `_internal_response_id` 컬럼을 생성하고 빈 ID를 채우는 흐름(기존·신규 응답 모두)을 검증하는 것**입니다.

@@ -15,8 +15,8 @@
 
 ```text
 기술 스택: Next.js + TypeScript + PostgreSQL + Prisma
-원본 응답 Sheet: 읽기 전용
-내부 ID: Apps Script가 _internal_response_id 컬럼에 자동 기록
+원본 응답 Sheet: 응답자 입력 필드는 읽기 전용, `_internal_response_id` 컬럼만 서버가 기록
+내부 ID: 서버가 동기화 시 _internal_response_id 컬럼에 자동 기록
 운영 상태 기준: 웹사이트 데이터베이스
 운영 상태 동기화: 웹사이트 → 같은 Spreadsheet의 운영 상태 탭 단방향
 활성 파티: MVP에서는 하나
@@ -78,9 +78,9 @@ EPIC-03과 EPIC-04의 일부 작업은 EPIC-02 완료 후 병렬 진행할 수 �
 
 - [ ] `TASK-00-01` Google Cloud 프로젝트·Sheets API·OAuth 구성
 - [ ] `TASK-00-02` 테스트 원본 Sheet와 같은 Spreadsheet의 `운영 상태` 탭 생성
-- [ ] `TASK-00-03` Apps Script Web App과 Secret 검증 구현
-- [ ] `TASK-00-04` 기존 응답 ID 일괄 생성 구현
-- [ ] `TASK-00-05` 신규 응답 ID 자동 생성 트리거 구현
+- [ ] `TASK-00-03` 서버가 `_internal_response_id` 컬럼을 생성·기록하는 권한 검증
+- [ ] `TASK-00-04` 기존 응답 ID 일괄 생성 구현 (동기화 시 빈 ID 채우기)
+- [ ] `TASK-00-05` 신규 응답이 동기화 시 ID를 부여받는지 검증
 - [ ] `TASK-00-06` 운영 상태 Sheet 행 추가·갱신 검증
 - [ ] `TASK-00-07` 전체 연동 시나리오 테스트
 
@@ -132,7 +132,7 @@ EPIC-03과 EPIC-04의 일부 작업은 EPIC-02 완료 후 병렬 진행할 수 �
 
 - [ ] `TASK-02-01` 활성 파티·원본·운영 Sheet 설정 화면 구현
 - [ ] `TASK-02-02` Sheet URL·ID와 탭 이름 저장 구현
-- [ ] `TASK-02-03` 원본 읽기·운영 쓰기 권한 검증
+- [ ] `TASK-02-03` 원본 읽기·운영 쓰기·ID 컬럼 쓰기 권한 검증
 - [ ] `TASK-02-04` 표준 필수 컬럼 검증
 - [ ] `TASK-02-05` 현재 연결 정보 표시
 
@@ -140,15 +140,15 @@ EPIC-03과 EPIC-04의 일부 작업은 EPIC-02 완료 후 병렬 진행할 수 �
 
 ## US-04. 내부 응답 ID 자동 관리
 
-기존·신규 응답에 `_internal_response_id`를 자동 생성하고 보호한다.
+서버가 기존·신규 응답에 `_internal_response_id`를 자동 생성한다.
 
 - [ ] `TASK-02-06` ID 컬럼 확인·추가와 UUID 생성 구현
-- [ ] `TASK-02-07` 기존 응답 일괄 생성 Web App 구현
-- [ ] `TASK-02-08` 신규 Form 제출 트리거 구현
-- [ ] `TASK-02-09` ID 컬럼 보호와 중복 검사 구현
-- [ ] `TASK-02-10` 누락 ID 보완 로직 구현
+- [ ] `TASK-02-07` 동기화 시 빈 ID 일괄 생성 구현
+- [ ] `TASK-02-08` 신규 응답이 다음 동기화에서 ID를 부여받는지 검증
+- [ ] `TASK-02-09` 기존 ID 보존과 중복 방지 구현
+- [ ] `TASK-02-10` 워크스페이스 단위 동기화 직렬화 구현
 
-완료 기준: 기존·신규 응답의 ID 자동 생성, 중복 방지, 컬럼 보호가 동작한다.
+완료 기준: 기존·신규 응답의 ID 자동 생성, 기존 ID 보존, 동시 실행 시 중복 방지가 동작한다.
 
 ## US-05. 응답 데이터 수동 동기화
 
@@ -290,7 +290,7 @@ EPIC-03과 EPIC-04의 일부 작업은 EPIC-02 완료 후 병렬 진행할 수 �
 - [ ] `TASK-06-06` 운영 PostgreSQL과 Prisma Migration 구성
 - [ ] `TASK-06-07` 운영 환경변수·Secret 등록
 - [ ] `TASK-06-08` 운영 OAuth Redirect URI·허용 계정 설정
-- [ ] `TASK-06-09` 운영 Apps Script Web App 배포
+- [ ] `TASK-06-09` 운영 환경에서 서버 ID 생성·운영 상태 반영 검증
 - [ ] `TASK-06-10` 도메인·HTTPS·운영 Sheet 연결
 - [ ] `TASK-06-11` 운영 최초 동기화 실행
 - [ ] `TASK-06-12` MVP 인수 테스트와 완료 체크리스트 실행

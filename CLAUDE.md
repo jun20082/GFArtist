@@ -21,7 +21,7 @@ as final until they are explicitly confirmed.
 - Implement the MVP only.
 - Do not add features listed as excluded unless the user explicitly requests them.
 - Follow P0 validation and decision steps before P1 implementation unless the user explicitly directs otherwise.
-- Preserve these data-flow rules: the respondent-provided fields in the source response Sheet are read-only, Apps Script may add and maintain only the `_internal_response_id` system column, the database is the source of truth for operating status, and status synchronization is one-way to the operating-status tab in the source spreadsheet.
+- Preserve these data-flow rules: the respondent-provided fields in the source response Sheet are read-only, the server may add and maintain only the `_internal_response_id` system column, the database is the source of truth for operating status, and status synchronization is one-way to the operating-status tab in the source spreadsheet.
 
 ## Security
 
