@@ -79,8 +79,8 @@ export default async function Home({
           <div className="mt-10 rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-slate-300">
             <p className="font-medium text-white">아직 워크스페이스가 없습니다</p>
             <p className="mt-2 leading-6">
-              Sheets 설정에서 자기 파티의 Google Sheets를 연결하면 워크스페이스가 만들어지고,
-              그때부터 응답자 검색을 사용할 수 있습니다.
+              Sheets 설정에서 자기 워크스페이스를 만든 뒤 자기 파티의 Google Sheets를 연결하면
+              응답자 검색을 사용할 수 있습니다.
             </p>
             <Link
               className="mt-4 inline-block text-emerald-300 hover:text-emerald-200"

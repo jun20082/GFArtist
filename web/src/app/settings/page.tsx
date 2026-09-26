@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { SourceSettingsForm } from '@/app/settings/source-settings-form';
+import { CreateWorkspaceForm } from '@/app/settings/create-workspace-form';
 import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
 import { CleanupDuplicatesButton } from '@/app/settings/cleanup-duplicates-button';
@@ -47,8 +48,8 @@ export default async function SettingsPage() {
   const memberships = await getWorkspaceMemberships(session.user.id);
   const sourceSettings = context?.sourceSettings ?? null;
   const roleLabel = context ? workspaceRoleLabels[context.role] : null;
-  const canEditSettings = !context || context.role === 'OWNER';
-  const canSync = context?.role === 'OWNER' && Boolean(sourceSettings);
+  const isOwner = context?.role === 'OWNER';
+  const canSync = isOwner && Boolean(sourceSettings);
   const pendingCount = sourceSettings
     ? await prisma.response.count({
         where: {
@@ -126,14 +127,14 @@ export default async function SettingsPage() {
           </dl>
         ) : (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            <p className="font-medium text-white">새 워크스페이스를 만듭니다</p>
+            <p className="font-medium text-white">아직 워크스페이스가 없습니다</p>
             <p className="mt-2 leading-6">
-              아래에서 자기 파티의 Google Sheets를 연결하면 이 계정의 워크스페이스가 만들어집니다.
+              아래에서 새 워크스페이스를 만들면 이 계정의 소유자 워크스페이스가 됩니다.
             </p>
           </div>
         )}
         <div className="mt-8">
-          {canEditSettings ? (
+          {isOwner ? (
             <SourceSettingsForm
               partyName={sourceSettings?.partyName ?? null}
               responseSheetName={sourceSettings?.responseSheetName ?? null}
@@ -151,15 +152,19 @@ export default async function SettingsPage() {
                   : null
               }
             />
-          ) : (
+          ) : context ? (
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-slate-300">
               <p className="font-medium text-white">Sheets 설정은 소유자만 변경할 수 있습니다</p>
               <p className="mt-2 leading-6">
                 현재 역할은 {roleLabel}입니다. 연결 정보를 바꾸려면 워크스페이스 소유자에게
-                요청하세요. 응답 동기화와 상태 변경은 계속 사용할 수 있습니다.
+                요청하세요. 응답 동기화와 상태 변경은 계속 사용할 수 있습니다. 자기 워크스페이스가
+                필요하면 아래에서 새로 만드세요.
               </p>
             </div>
-          )}
+          ) : null}
+        </div>
+        <div className="mt-6">
+          <CreateWorkspaceForm />
         </div>
         <div className="mt-6">
           {canSync ? (
