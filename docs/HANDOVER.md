@@ -19,6 +19,7 @@ Google Forms 응답을 Google Sheets에서 가져와 검색하고, 현장 운영
 | 역할 | OWNER(설정·초대·동기화) / OPERATOR(조회·상태 변경) | `web/src/lib/workspace.ts` |
 | 초대 | 이메일 초대, 로그인 허용 판정, 로그인 시 멤버십 수락(멱등), 취소 | `web/src/lib/invites.ts`, `web/src/app/settings/invite-manager.tsx` |
 | 멤버 관리 | 목록, 제거(소속·초대·현재 워크스페이스 정리) | `web/src/lib/workspace-members.ts`, `web/src/app/settings/member-manager.tsx` |
+| 워크스페이스 정리 | 소유자 삭제(설정·응답·멤버십·초대 제거, 시트는 유지), 운영자 나가기(멤버십만 제거) | `web/src/lib/workspace-membership.ts`, `web/src/app/settings/workspace-membership-actions.tsx` |
 | 인증 | Auth.js v5 JWT 세션(7일), Google OAuth, 가입 개방(누구나 로그인 후 자기 워크스페이스 생성) + 로그인 시 초대 수락 | `web/src/auth.ts`, `web/src/lib/invites.ts` |
 | Sheets 연결 | URL/ID·탭 드롭다운 저장, 권한·탭 검증, 추가 표시 컬럼 선택, 워크스페이스당 설정 1행 | `web/src/lib/source-settings.ts`, `web/src/app/api/source-settings/headers/route.ts` |
 | 컬럼 매핑 | 이름·전화번호 필수, 성별·주문 상품 선택, 시트 헤더 드롭다운 선택, 추가 표시 컬럼 다중 선택, 불일치 시 동기화 중단 | `web/src/lib/column-mapping.ts`, `web/src/app/settings/source-settings-form.tsx` |
@@ -165,6 +166,7 @@ Remove-Item Env:\DATABASE_URL
 web/src/auth.ts                              인증·세션·초대 수락
 web/src/lib/workspace.ts                     워크스페이스 컨텍스트·멤버십·전환
 web/src/lib/workspace-members.ts             멤버 목록·제거
+web/src/lib/workspace-membership.ts          워크스페이스 삭제·나가기
 web/src/lib/invites.ts                       초대 생성·취소·수락·허용 판정
 web/src/lib/source-settings.ts               설정 저장·조회·캐시·탭 검증
 web/src/lib/column-mapping.ts                헤더 자동 인식·검증
@@ -179,6 +181,7 @@ web/src/app/privacy/page.tsx                 공개 개인정보처리방침 (OA
 web/src/app/api/workspace/route.ts           워크스페이스 생성 API (POST)
 web/src/app/api/source-settings/headers/route.ts  시트 탭·헤더 조회 API (GET)
 web/src/app/settings/create-workspace-form.tsx  워크스페이스 생성 폼
+web/src/app/settings/workspace-membership-actions.tsx  삭제/나가기 버튼
 web/src/app/settings/source-settings-form.tsx   탭·컬럼 드롭다운 설정 폼
 web/src/app/api/**                           API 라우트
 web/src/app/settings/**                      설정 화면 카드들
