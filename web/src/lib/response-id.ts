@@ -15,6 +15,8 @@ export type InternalIdPlan = {
   headerRow: string[];
   /** One value per data row: existing id, generated id, or '' for untouched rows. */
   columnValues: string[];
+  /** Data row indexes (0-based) that received a new id. */
+  generatedIndexes: number[];
   /** Number of ids generated in this plan. */
   generatedCount: number;
 };
@@ -60,26 +62,28 @@ export function planInternalIds({
   const idIndex = headerAdded ? headers.length : existingIndex;
   const headerRow = headerAdded ? [...headers, idHeader] : headers;
   const columnValues: string[] = [];
+  const generatedIndexes: number[] = [];
   let generatedCount = 0;
 
-  for (const row of rows) {
+  rows.forEach((row, index) => {
     const current = headerAdded ? '' : cellText(row, idIndex);
 
     if (current) {
       columnValues.push(current);
-      continue;
+      return;
     }
 
     const hasIdentity = Boolean(cellText(row, nameIndex) || cellText(row, phoneIndex));
 
     if (!hasIdentity) {
       columnValues.push('');
-      continue;
+      return;
     }
 
     columnValues.push(generateId());
+    generatedIndexes.push(index);
     generatedCount += 1;
-  }
+  });
 
-  return { idIndex, headerAdded, headerRow, columnValues, generatedCount };
+  return { idIndex, headerAdded, headerRow, columnValues, generatedIndexes, generatedCount };
 }

@@ -112,4 +112,18 @@ describe('planInternalIds', () => {
 
     assert.equal(result.columnValues.length, rows.length);
   });
+
+  test('생성된 행의 인덱스를 함께 돌려준다', () => {
+    const result = plan({
+      rows: [
+        ['', '', ''],
+        ['a', '010-1', ''],
+        ['b', '010-2', 'resp_keep'],
+        ['c', '010-3', ''],
+      ],
+    });
+
+    assert.deepEqual(result.generatedIndexes, [1, 3]);
+    assert.equal(result.generatedCount, 2);
+  });
 });
