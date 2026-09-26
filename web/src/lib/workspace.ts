@@ -117,24 +117,21 @@ export async function isWorkspaceOwner(userId: string, workspaceId: string | nul
   return Boolean(membership);
 }
 
-export async function ensureOwnedWorkspace(userId: string, name: string) {
-  const existing = await prisma.workspaceMember.findFirst({
-    where: { userId, role: 'OWNER' },
-    orderBy: { createdAt: 'asc' },
-    include: { workspace: true },
-  });
+/**
+ * Creates a new workspace owned by the user and makes it current. A user may
+ * own several workspaces, so this always creates a new one instead of reusing
+ * an existing owned workspace.
+ */
+export async function createOwnedWorkspace(userId: string, name: string) {
+  const trimmed = name.trim();
 
-  if (existing) {
-    await prisma.user
-      .update({ where: { id: userId }, data: { currentWorkspaceId: existing.workspaceId } })
-      .catch(() => undefined);
-
-    return existing.workspace;
+  if (!trimmed) {
+    throw new Error('워크스페이스 이름을 입력하세요.');
   }
 
   const created = await prisma.workspace.create({
     data: {
-      name,
+      name: trimmed,
       ownerUserId: userId,
       members: { create: { userId, role: 'OWNER' } },
     },

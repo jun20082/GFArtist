@@ -1,6 +1,7 @@
 ﻿import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { missingTabMessage, saveSourceSettings, type ValidatedSourceSettings } from './source-settings';
+import { createOwnedWorkspace } from './workspace';
 import { defaultColumnMapping } from './column-mapping';
 import {
   addWorkspaceMember,
@@ -67,19 +68,29 @@ describe('missingTabMessage', () => {
 });
 
 describe('saveSourceSettings', () => {
-  test('처음 저장하면 워크스페이스와 설정을 함께 만든다', async () => {
+  test('워크스페이스가 없으면 저장을 거부한다', async () => {
     await resetWithUsers(TEST_USER_ID);
+
+    await assert.rejects(
+      () => saveSourceSettings(TEST_USER_ID, buildSettings()),
+      /워크스페이스가 없습니다/,
+    );
+    assert.equal(await prisma.sourceSettings.count(), 0);
+  });
+
+  test('워크스페이스가 있으면 설정을 만든다', async () => {
+    await resetWithUsers(TEST_USER_ID);
+    const workspace = await createOwnedWorkspace(TEST_USER_ID, '테스트 파티');
 
     const saved = await saveSourceSettings(TEST_USER_ID, buildSettings());
 
     assert.equal(saved.spreadsheetId, 'sheet-1');
+    assert.equal(saved.workspaceId, workspace.id);
     assert.equal(await prisma.sourceSettings.count(), 1);
     assert.equal(await prisma.workspace.count(), 1);
 
-    const workspace = await prisma.workspace.findFirstOrThrow();
     const membership = await prisma.workspaceMember.findFirstOrThrow();
 
-    assert.equal(saved.workspaceId, workspace.id);
     assert.equal(membership.workspaceId, workspace.id);
     assert.equal(membership.userId, TEST_USER_ID);
     assert.equal(membership.role, 'OWNER');
@@ -87,6 +98,7 @@ describe('saveSourceSettings', () => {
 
   test('같은 워크스페이스에서 다시 저장해도 행이 늘지 않는다', async () => {
     await resetWithUsers(TEST_USER_ID);
+    await createOwnedWorkspace(TEST_USER_ID, '테스트 파티');
 
     const first = await saveSourceSettings(TEST_USER_ID, buildSettings());
     const second = await saveSourceSettings(
@@ -104,6 +116,7 @@ describe('saveSourceSettings', () => {
 
   test('다시 저장해도 연결된 응답이 그대로 남는다', async () => {
     await resetWithUsers(TEST_USER_ID);
+    await createOwnedWorkspace(TEST_USER_ID, '테스트 파티');
 
     const first = await saveSourceSettings(TEST_USER_ID, buildSettings());
     await createResponse(first.id, { name: '응답자', phoneRaw: '010-1111-2222' });
@@ -119,6 +132,8 @@ describe('saveSourceSettings', () => {
 
   test('다른 워크스페이스가 쓰는 스프레드시트는 거부한다', async () => {
     await resetWithUsers('user-1', 'user-2');
+    await createOwnedWorkspace('user-1', 'A 파티');
+    await createOwnedWorkspace('user-2', 'B 파티');
 
     await saveSourceSettings('user-1', buildSettings({ spreadsheetId: 'sheet-1' }));
     await saveSourceSettings('user-2', buildSettings({ spreadsheetId: 'sheet-2' }));
@@ -144,6 +159,8 @@ describe('saveSourceSettings', () => {
 
   test('워크스페이스마다 자기 스프레드시트를 가진다', async () => {
     await resetWithUsers('user-1', 'user-2');
+    await createOwnedWorkspace('user-1', 'A 파티');
+    await createOwnedWorkspace('user-2', 'B 파티');
 
     const first = await saveSourceSettings('user-1', buildSettings({ spreadsheetId: 'sheet-a' }));
     const second = await saveSourceSettings('user-2', buildSettings({ spreadsheetId: 'sheet-b' }));

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import type { SourceSettings } from '@/generated/prisma/client';
 import { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
-import { ensureOwnedWorkspace, getWorkspaceContext } from '@/lib/workspace';
+import { getWorkspaceContext } from '@/lib/workspace';
 import { resolveColumnMapping } from '@/lib/column-mapping';
 
 export const sourceSettingsInput = z.object({
@@ -117,14 +117,18 @@ export async function getWorkspaceSourceSettings(userId: string) {
 export type ValidatedSourceSettings = Awaited<ReturnType<typeof validateSourceSettings>>;
 
 /**
- * Stores the caller's workspace settings. The first save also creates the
- * workspace. Only the workspace owner may change the connection, and a
- * spreadsheet cannot be claimed by two workspaces.
+ * Stores the caller's current workspace settings. The workspace must already
+ * exist (created explicitly first). Only the workspace owner may change the
+ * connection, and a spreadsheet cannot be claimed by two workspaces.
  */
 export async function saveSourceSettings(userId: string, input: ValidatedSourceSettings) {
   const context = await getWorkspaceContext(userId);
 
-  if (context && context.role !== 'OWNER') {
+  if (!context) {
+    throw new Error('워크스페이스가 없습니다. 먼저 워크스페이스를 만드세요.');
+  }
+
+  if (context.role !== 'OWNER') {
     throw new Error('워크스페이스 소유자만 Sheets 설정을 변경할 수 있습니다.');
   }
 
@@ -132,7 +136,7 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
     where: { spreadsheetId: input.spreadsheetId },
   });
 
-  const workspace = context?.workspace ?? (await ensureOwnedWorkspace(userId, input.partyName));
+  const workspace = context.workspace;
 
   if (claimed && claimed.workspaceId !== workspace.id) {
     throw new Error('이 스프레드시트는 다른 워크스페이스에서 이미 사용 중입니다.');

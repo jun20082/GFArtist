@@ -1,6 +1,7 @@
 import test, { after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  createOwnedWorkspace,
   getResponseForMember,
   getWorkspaceContext,
   getWorkspaceMemberships,
@@ -14,6 +15,7 @@ import {
   addWorkspaceMember,
   createResponse,
   createSourceSettings,
+  createUser,
   prisma,
   resetDatabase,
   seedDefaultCategories,
@@ -180,6 +182,59 @@ describe('워크스페이스 전환', () => {
         ['B 파티', true],
       ],
     );
+  });
+});
+
+describe('워크스페이스 생성', () => {
+  test('소유 워크스페이스를 만들고 현재로 설정한다', async () => {
+    await setup();
+    await createUser('user-1');
+
+    const workspace = await createOwnedWorkspace('user-1', '내 파티');
+
+    assert.equal(workspace.name, '내 파티');
+
+    const membership = await prisma.workspaceMember.findFirstOrThrow({
+      where: { workspaceId: workspace.id, userId: 'user-1' },
+    });
+    assert.equal(membership.role, 'OWNER');
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: 'user-1' } });
+    assert.equal(user.currentWorkspaceId, workspace.id);
+  });
+
+  test('다른 워크스페이스의 운영자여도 자기 워크스페이스를 만든다', async () => {
+    await setup();
+    const other = await createSourceSettings({ userId: 'user-1' });
+    await addWorkspaceMember(other.workspaceId as string, 'user-2', 'OPERATOR');
+
+    const workspace = await createOwnedWorkspace('user-2', 'user2 파티');
+
+    assert.notEqual(workspace.id, other.workspaceId);
+
+    const context = await getWorkspaceContext('user-2');
+    assert.equal(context?.workspace.id, workspace.id);
+    assert.equal(context?.role, 'OWNER');
+  });
+
+  test('이미 소유 워크스페이스가 있어도 새 워크스페이스를 추가한다', async () => {
+    await setup();
+    const first = await createSourceSettings({ userId: 'user-1' });
+
+    const second = await createOwnedWorkspace('user-1', '두 번째 파티');
+
+    assert.notEqual(first.workspaceId, second.id);
+    assert.equal(await prisma.workspace.count(), 2);
+
+    const context = await getWorkspaceContext('user-1');
+    assert.equal(context?.workspace.id, second.id);
+  });
+
+  test('빈 이름은 거부한다', async () => {
+    await setup();
+    await createUser('user-1');
+
+    await assert.rejects(() => createOwnedWorkspace('user-1', '   '), /이름/);
   });
 });
 
