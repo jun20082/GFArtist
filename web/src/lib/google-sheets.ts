@@ -1,6 +1,5 @@
-import { google } from 'googleapis';
+﻿import { google } from 'googleapis';
 import { prisma } from '@/lib/prisma';
-import { decryptSecret } from '@/lib/secret-box';
 
 type SheetsClient = ReturnType<typeof google.sheets>;
 
@@ -33,8 +32,8 @@ export async function getSheetsClient(userId: string) {
 
   if (!hasRequiredSheetsScope(account.scope)) {
     throw new Error(
-      'Google Sheets 권한이 없습니다. 로그아웃한 뒤 다시 로그인해 스프레드시트 접근을 승인하세요. ' +
-        `(현재 승인된 범위: ${account.scope})`,
+      'Google Sheets 沅뚰븳???놁뒿?덈떎. 濡쒓렇?꾩썐?????ㅼ떆 濡쒓렇?명빐 ?ㅽ봽?덈뱶?쒗듃 ?묎렐???뱀씤?섏꽭?? ' +
+        `(?꾩옱 ?뱀씤??踰붿쐞: ${account.scope})`,
     );
   }
 
@@ -105,81 +104,3 @@ export async function getSheetsClient(userId: string) {
 }
 
 export { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
-
-type AppsScriptConfig = {
-  appsScriptUrl?: string | null;
-  appsScriptSecretEncrypted?: string | null;
-  responseSheetName: string;
-};
-
-/**
- * Ensures the source sheet has internal response ids by calling the Apps
- * Script Web App of the workspace. Workspaces that never stored their own Web
- * App fall back to the GOOGLE_APPS_SCRIPT_URL and GOOGLE_APPS_SCRIPT_SECRET
- * environment variables.
- */
-export async function ensureAppsScriptIds(sourceSettings: AppsScriptConfig) {
-  const url = sourceSettings.appsScriptUrl ?? process.env.GOOGLE_APPS_SCRIPT_URL;
-  let secret: string | null = null;
-
-  if (sourceSettings.appsScriptUrl) {
-    if (!sourceSettings.appsScriptSecretEncrypted) {
-      throw new Error(
-        '이 워크스페이스에는 Apps Script Secret이 저장되어 있지 않습니다. Sheets 설정에서 Secret을 입력하세요.',
-      );
-    }
-
-    const key = process.env.APP_ENCRYPTION_KEY;
-
-    if (!key) {
-      throw new Error('APP_ENCRYPTION_KEY is not configured.');
-    }
-
-    secret = decryptSecret(sourceSettings.appsScriptSecretEncrypted, key);
-  } else {
-    secret = process.env.GOOGLE_APPS_SCRIPT_SECRET ?? null;
-  }
-
-  if (!url || !secret) {
-    throw new Error(
-      'Apps Script Web App 구성이 없습니다. Sheets 설정에서 Web App URL과 Secret을 입력하세요.',
-    );
-  }
-
-  if (!url.endsWith('/exec')) {
-    throw new Error(
-      `Apps Script Web App URL must end with /exec. Current value: ${url}`,
-    );
-  }
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      action: 'ensure_ids',
-      secret,
-      sheetName: sourceSettings.responseSheetName,
-    }),
-    signal: AbortSignal.timeout(15_000),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Apps Script request failed with status ${response.status}. Target: ${url}. ` +
-        'Check that the Web App URL points at the current deployment.',
-    );
-  }
-
-  const result = (await response.json()) as {
-    ok?: boolean;
-    error?: string;
-    generatedCount?: number;
-    totalResponseCount?: number;
-  };
-
-  if (!result.ok) {
-    throw new Error(result.error ?? 'Apps Script returned an unknown error.');
-  }
-
-  return result;
-}

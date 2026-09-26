@@ -117,14 +117,11 @@ model SourceSettings {
   spreadsheetId             String     @unique
   responseSheetName         String
   operatingStatusSheetName  String
-  appsScriptUrl             String?
-  appsScriptSecretEncrypted String?    @db.Text
   nameHeader                String     @default("이름")
   phoneHeader               String     @default("전화번호")
   genderHeader              String     @default("성별")
   orderedProductHeader      String     @default("주문 상품")
   internalResponseIdHeader  String     @default("_internal_response_id")
-  isActive                  Boolean    @default(true)
   lastResponseSyncAt        DateTime?
   createdAt                 DateTime   @default(now())
   updatedAt                 DateTime   @updatedAt

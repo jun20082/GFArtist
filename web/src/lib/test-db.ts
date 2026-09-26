@@ -77,7 +77,6 @@ export async function createSourceSettings(
       spreadsheetId: `test-sheet-${Math.random().toString(36).slice(2, 10)}`,
       responseSheetName: '설문지 응답',
       operatingStatusSheetName: '운영 상태',
-      isActive: true,
     },
   });
 }

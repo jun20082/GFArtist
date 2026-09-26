@@ -104,8 +104,6 @@ export default async function SettingsPage() {
         <div className="mt-8">
           {canEditSettings ? (
             <SourceSettingsForm
-              appsScriptUrl={sourceSettings?.appsScriptUrl ?? null}
-              hasAppsScriptSecret={Boolean(sourceSettings?.appsScriptSecretEncrypted)}
               partyName={sourceSettings?.partyName ?? null}
               responseSheetName={sourceSettings?.responseSheetName ?? null}
               spreadsheetId={sourceSettings?.spreadsheetId ?? null}

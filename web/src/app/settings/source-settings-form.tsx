@@ -4,8 +4,6 @@ import { FormEvent, useState } from 'react';
 import { columnMappingLabels, type ColumnMapping } from '@/lib/column-mapping';
 
 type SourceSettingsFormProps = {
-  appsScriptUrl: string | null;
-  hasAppsScriptSecret: boolean;
   partyName: string | null;
   spreadsheetId: string | null;
   responseSheetName: string | null;
@@ -25,7 +23,6 @@ type SourceSettingsResponse = {
     genderHeader: string;
     orderedProductHeader: string;
     internalResponseIdHeader: string;
-    hasAppsScriptSecret: boolean;
   } | null;
 };
 
@@ -51,8 +48,6 @@ function emptyMapping(): Record<keyof ColumnMapping, string> {
 }
 
 export function SourceSettingsForm({
-  appsScriptUrl,
-  hasAppsScriptSecret,
   partyName,
   spreadsheetId,
   responseSheetName,
@@ -62,7 +57,6 @@ export function SourceSettingsForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [secretStored, setSecretStored] = useState(hasAppsScriptSecret);
   const [partyNameValue, setPartyNameValue] = useState(partyName ?? '');
   const [spreadsheetValue, setSpreadsheetValue] = useState(spreadsheetId ?? '');
   const [responseSheetValue, setResponseSheetValue] = useState(
@@ -81,15 +75,11 @@ export function SourceSettingsForm({
     setError(null);
     setIsSubmitting(true);
 
-    const formData = new FormData(event.currentTarget);
-    const appsScriptSecret = formData.get('appsScriptSecret');
-
     const body: Record<string, string> = {
       partyName: partyNameValue,
       spreadsheetUrlOrId: spreadsheetValue,
       responseSheetName: responseSheetValue,
       operatingStatusSheetName: operatingStatusSheetValue,
-      appsScriptUrl: String(formData.get('appsScriptUrl') ?? ''),
     };
 
     for (const name of mappingFieldNames) {
@@ -98,10 +88,6 @@ export function SourceSettingsForm({
       if (value) {
         body[name] = value;
       }
-    }
-
-    if (appsScriptSecret) {
-      body.appsScriptSecret = String(appsScriptSecret);
     }
 
     const response = await fetch('/api/source-settings', {
@@ -130,7 +116,6 @@ export function SourceSettingsForm({
         orderedProductHeader: result.sourceSettings.orderedProductHeader,
         internalResponseIdHeader: result.sourceSettings.internalResponseIdHeader,
       });
-      setSecretStored(result.sourceSettings.hasAppsScriptSecret);
     }
 
     setMessage('Google Sheets 연결이 저장되었습니다. 아래 컬럼 매핑이 실제 적용값입니다.');
@@ -208,38 +193,6 @@ export function SourceSettingsForm({
             />
           </label>
         ))}
-      </div>
-
-      <div className="space-y-5 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
-        <p className="text-xs leading-5 text-slate-400">
-          Apps Script Web App 설정 (선택). 각 파티의 Web App URL과 Secret을 저장하면 이 파티에만
-          사용됩니다. 비워 두면 서버 환경변수(GOOGLE_APPS_SCRIPT_URL)를 사용합니다.
-        </p>
-
-        <label className="block text-sm text-slate-200">
-          Apps Script Web App URL
-          <input
-            className={inputClassName}
-            defaultValue={appsScriptUrl ?? ''}
-            name="appsScriptUrl"
-            placeholder="https://script.google.com/macros/s/.../exec"
-            type="url"
-          />
-        </label>
-
-        <label className="block text-sm text-slate-200">
-          Apps Script Secret{' '}
-          <span className="text-xs text-slate-400">
-            {secretStored ? '(저장됨 — 새 값을 입력하면 교체)' : '(미설정)'}
-          </span>
-          <input
-            autoComplete="off"
-            className={inputClassName}
-            name="appsScriptSecret"
-            placeholder="Web App과 공유한 Secret"
-            type="password"
-          />
-        </label>
       </div>
 
       <button

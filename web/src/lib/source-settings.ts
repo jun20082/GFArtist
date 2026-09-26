@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import type { SourceSettings } from '@/generated/prisma/client';
 import { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
 import { ensureOwnedWorkspace, getWorkspaceContext } from '@/lib/workspace';
-import { encryptSecret } from '@/lib/secret-box';
 import { resolveColumnMapping } from '@/lib/column-mapping';
 
 export const sourceSettingsInput = z.object({
@@ -11,8 +10,6 @@ export const sourceSettingsInput = z.object({
   spreadsheetUrlOrId: z.string().trim().min(1),
   responseSheetName: z.string().trim().min(1).max(200),
   operatingStatusSheetName: z.string().trim().min(1).max(200),
-  appsScriptUrl: z.string().trim().optional(),
-  appsScriptSecret: z.string().optional(),
   nameHeader: z.string().trim().optional(),
   phoneHeader: z.string().trim().optional(),
   genderHeader: z.string().trim().optional(),
@@ -77,10 +74,6 @@ export async function validateSourceSettings(
     internalResponseIdHeader: input.internalResponseIdHeader,
   });
 
-  if (input.appsScriptUrl && !input.appsScriptUrl.endsWith('/exec')) {
-    throw new Error('Apps Script Web App URL must end with /exec.');
-  }
-
   return { ...input, spreadsheetId, mapping };
 }
 
@@ -124,19 +117,6 @@ export async function getWorkspaceSourceSettings(userId: string) {
 export type ValidatedSourceSettings = Awaited<ReturnType<typeof validateSourceSettings>>;
 
 /**
- * Source settings for the browser. The Apps Script secret never leaves the
- * server; the UI only needs to know whether one is stored.
- */
-export function toPublicSourceSettings(settings: SourceSettings) {
-  const { appsScriptSecretEncrypted, ...rest } = settings;
-
-  return {
-    ...rest,
-    hasAppsScriptSecret: Boolean(appsScriptSecretEncrypted),
-  };
-}
-
-/**
  * Stores the caller's workspace settings. The first save also creates the
  * workspace. Only the workspace owner may change the connection, and a
  * spreadsheet cannot be claimed by two workspaces.
@@ -158,7 +138,6 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
     throw new Error('이 스프레드시트는 다른 워크스페이스에서 이미 사용 중입니다.');
   }
 
-  const secretChanges = buildSecretChanges(input.appsScriptSecret);
   const mapping = input.mapping;
 
   const saved = await prisma.sourceSettings.upsert({
@@ -169,49 +148,18 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
       spreadsheetId: input.spreadsheetId,
       responseSheetName: input.responseSheetName,
       operatingStatusSheetName: input.operatingStatusSheetName,
-      appsScriptUrl: input.appsScriptUrl || null,
-      appsScriptSecretEncrypted: secretChanges.encrypted ?? null,
       ...mapping,
-      isActive: true,
     },
     update: {
       partyName: input.partyName,
       spreadsheetId: input.spreadsheetId,
       responseSheetName: input.responseSheetName,
       operatingStatusSheetName: input.operatingStatusSheetName,
-      ...(input.appsScriptUrl === undefined ? {} : { appsScriptUrl: input.appsScriptUrl || null }),
-      ...secretChanges.changes,
       ...mapping,
-      isActive: true,
     },
   });
 
   invalidateSourceSettingsCache(userId);
 
   return saved;
-}
-
-function buildSecretChanges(appsScriptSecret: string | undefined) {
-  if (appsScriptSecret === undefined) {
-    return { changes: {}, encrypted: undefined };
-  }
-
-  if (appsScriptSecret.length === 0) {
-    return { changes: { appsScriptSecretEncrypted: null }, encrypted: null };
-  }
-
-  const key = process.env.APP_ENCRYPTION_KEY;
-
-  if (!key) {
-    throw new Error(
-      'APP_ENCRYPTION_KEY is not configured. Generate a key and add it to the environment before storing the Apps Script Secret.',
-    );
-  }
-
-  const encrypted = encryptSecret(appsScriptSecret, key);
-
-  return {
-    changes: { appsScriptSecretEncrypted: encrypted },
-    encrypted,
-  };
 }
