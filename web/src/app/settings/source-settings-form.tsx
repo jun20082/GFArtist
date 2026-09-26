@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { unmappedColumnValue, type ColumnMapping } from '@/lib/column-mapping';
 
 type SourceSettingsFormProps = {
@@ -66,6 +67,7 @@ export function SourceSettingsForm({
   columnMapping,
   displayColumns,
 }: SourceSettingsFormProps) {
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,7 +124,6 @@ export function SourceSettingsForm({
     preferredOperating: string,
   ) {
     setError(null);
-    setMessage(null);
     setIsLoadingSheet(true);
 
     try {
@@ -221,36 +222,41 @@ export function SourceSettingsForm({
     if (genderHeaderValue) body.genderHeader = genderHeaderValue;
     if (orderedProductHeaderValue) body.orderedProductHeader = orderedProductHeaderValue;
 
-    const response = await fetch('/api/source-settings', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    try {
+      const response = await fetch('/api/source-settings', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-    const result = (await response.json()) as SourceSettingsResponse;
-    setIsSubmitting(false);
+      const result = (await response.json().catch(() => ({}))) as SourceSettingsResponse;
 
-    if (!response.ok) {
-      setError(result.error ?? '연결에 실패했습니다.');
-      return;
+      if (!response.ok) {
+        setError(result.error ?? '연결에 실패했습니다.');
+        return;
+      }
+
+      if (result.sourceSettings) {
+        setPartyNameValue(result.sourceSettings.partyName);
+        setSpreadsheetValue(result.sourceSettings.spreadsheetId);
+        setResponseSheetValue(result.sourceSettings.responseSheetName);
+        setOperatingStatusSheetValue(result.sourceSettings.operatingStatusSheetName);
+        setNameHeaderValue(result.sourceSettings.nameHeader);
+        setPhoneHeaderValue(result.sourceSettings.phoneHeader);
+        setGenderHeaderValue(result.sourceSettings.genderHeader || unmappedColumnValue);
+        setOrderedProductHeaderValue(
+          result.sourceSettings.orderedProductHeader || unmappedColumnValue,
+        );
+        setDisplaySelection(result.sourceSettings.displayColumns ?? []);
+      }
+
+      setMessage('Google Sheets 연결이 저장되었습니다. 아래 컬럼 매핑이 실제 적용값입니다.');
+      router.refresh();
+    } catch {
+      setError('저장 요청에 실패했습니다. 네트워크를 확인하세요.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (result.sourceSettings) {
-      setPartyNameValue(result.sourceSettings.partyName);
-      setSpreadsheetValue(result.sourceSettings.spreadsheetId);
-      setResponseSheetValue(result.sourceSettings.responseSheetName);
-      setOperatingStatusSheetValue(result.sourceSettings.operatingStatusSheetName);
-      setNameHeaderValue(result.sourceSettings.nameHeader);
-      setPhoneHeaderValue(result.sourceSettings.phoneHeader);
-      setGenderHeaderValue(result.sourceSettings.genderHeader || unmappedColumnValue);
-      setOrderedProductHeaderValue(
-        result.sourceSettings.orderedProductHeader || unmappedColumnValue,
-      );
-      setDisplaySelection(result.sourceSettings.displayColumns ?? []);
-    }
-
-    setMessage('Google Sheets 연결이 저장되었습니다. 아래 컬럼 매핑이 실제 적용값입니다.');
-    void loadSheet(spreadsheetValue, responseSheetValue, operatingStatusSheetValue);
   }
 
   const displayOptions = headers.filter(
@@ -293,9 +299,10 @@ export function SourceSettingsForm({
           <button
             className="shrink-0 rounded-xl border border-white/15 px-4 py-3 text-sm text-slate-200 transition hover:border-white/40 disabled:opacity-50"
             disabled={isLoadingSheet || !spreadsheetValue.trim()}
-            onClick={() =>
-              loadSheet(spreadsheetValue, responseSheetValue, operatingStatusSheetValue)
-            }
+            onClick={() => {
+              setMessage(null);
+              void loadSheet(spreadsheetValue, responseSheetValue, operatingStatusSheetValue);
+            }}
             type="button"
           >
             {isLoadingSheet ? '불러오는 중...' : '시트 불러오기'}
