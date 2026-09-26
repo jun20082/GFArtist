@@ -5,6 +5,8 @@ import { SourceSettingsForm } from '@/app/settings/source-settings-form';
 import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
 import { CleanupDuplicatesButton } from '@/app/settings/cleanup-duplicates-button';
+import { InviteManager } from '@/app/settings/invite-manager';
+import { listWorkspaceInvites } from '@/lib/invites';
 import { getWorkspaceContext, getWorkspaceMemberships, workspaceRoleLabels } from '@/lib/workspace';
 import { WorkspaceSwitcher } from '@/app/workspace-switcher';
 import { StatusSyncState } from '@/generated/prisma/enums';
@@ -43,6 +45,8 @@ export default async function SettingsPage() {
         orderBy: { startedAt: 'desc' },
       })
     : null;
+  const invites =
+    context?.role === 'OWNER' ? await listWorkspaceInvites(context.workspace.id) : [];
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
@@ -154,6 +158,20 @@ export default async function SettingsPage() {
         <div className="mt-6">
           <CleanupDuplicatesButton />
         </div>
+        {context?.role === 'OWNER' ? (
+          <div className="mt-6">
+            <InviteManager
+              invites={invites.map((invite) => ({
+                id: invite.id,
+                email: invite.email,
+                status: invite.status,
+                acceptedAt: invite.acceptedAt
+                  ? formatKoreaTime(invite.acceptedAt)
+                  : null,
+              }))}
+            />
+          </div>
+        ) : null}
       </div>
     </main>
   );

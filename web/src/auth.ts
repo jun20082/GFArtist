@@ -3,6 +3,7 @@ import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import { isEmailAllowed, parseAllowedEmails } from '@/lib/allowed-emails';
+import { acceptInvitesForUser, isEmailInvited } from '@/lib/invites';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -37,7 +38,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * account signs in again (see @auth/core handle-login). Without this, an
      * account keeps the scopes from its very first login forever.
      */
-    async signIn({ account }) {
+    async signIn({ user, account }) {
+      if (user?.id && user.email) {
+        await acceptInvitesForUser(user.id, user.email).catch(() => undefined);
+      }
+
       if (!account || account.type === 'credentials') {
         return;
       }
@@ -77,7 +82,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user }) {
-      return isEmailAllowed(user.email, parseAllowedEmails(process.env.GOOGLE_ALLOWED_EMAILS));
+      const allowedByEnv = isEmailAllowed(user.email, parseAllowedEmails(process.env.GOOGLE_ALLOWED_EMAILS));
+
+      if (allowedByEnv) {
+        return true;
+      }
+
+      return isEmailInvited(user.email);
     },
     async jwt({ token, user }) {
       if (user?.id) {
