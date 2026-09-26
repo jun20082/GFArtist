@@ -2,8 +2,7 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
-import { isEmailAllowed, parseAllowedEmails } from '@/lib/allowed-emails';
-import { acceptInvitesForUser, isEmailInvited } from '@/lib/invites';
+import { acceptInvitesForUser } from '@/lib/invites';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -81,15 +80,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    async signIn({ user }) {
-      const allowedByEnv = isEmailAllowed(user.email, parseAllowedEmails(process.env.GOOGLE_ALLOWED_EMAILS));
-
-      if (allowedByEnv) {
-        return true;
-      }
-
-      return isEmailInvited(user.email);
-    },
     async jwt({ token, user }) {
       if (user?.id) {
         token.id = user.id;

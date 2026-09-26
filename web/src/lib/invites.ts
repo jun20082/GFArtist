@@ -12,8 +12,8 @@ function assertInviteEmail(email: string) {
 }
 
 /**
- * A login is allowed when the address is on the environment allowlist or has an
- * invite that was not revoked.
+ * Whether the address has an invite that was not revoked. Login is open to all
+ * Google accounts; this only reports pending existing invitations.
  */
 export async function isEmailInvited(email: string | null | undefined) {
   const normalized = normalizeInviteEmail(email);

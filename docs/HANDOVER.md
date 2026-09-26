@@ -19,7 +19,7 @@ Google Forms 응답을 Google Sheets에서 가져와 검색하고, 현장 운영
 | 역할 | OWNER(설정·초대·동기화) / OPERATOR(조회·상태 변경) | `web/src/lib/workspace.ts` |
 | 초대 | 이메일 초대, 로그인 허용 판정, 로그인 시 멤버십 수락(멱등), 취소 | `web/src/lib/invites.ts`, `web/src/app/settings/invite-manager.tsx` |
 | 멤버 관리 | 목록, 제거(소속·초대·현재 워크스페이스 정리) | `web/src/lib/workspace-members.ts`, `web/src/app/settings/member-manager.tsx` |
-| 인증 | Auth.js v5 JWT 세션(7일), Google OAuth, 환경 허용 목록 + 초대 경로 | `web/src/auth.ts`, `web/src/lib/allowed-emails.ts` |
+| 인증 | Auth.js v5 JWT 세션(7일), Google OAuth, 가입 개방(누구나 로그인 후 자기 워크스페이스 생성) + 로그인 시 초대 수락 | `web/src/auth.ts`, `web/src/lib/invites.ts` |
 | Sheets 연결 | URL/ID·탭 이름 저장, 권한·탭 검증, 워크스페이스당 설정 1행 | `web/src/lib/source-settings.ts` |
 | 컬럼 매핑 | 헤더 자동 인식(별칭), 직접 지정, 지정값이 없으면 저장 거부, 불일치 시 동기화 중단 | `web/src/lib/column-mapping.ts` |
 | 내부 ID | 서버가 동기화 시 `_internal_response_id` 컬럼 생성·기록 (Apps Script 제거됨) | `web/src/lib/response-id.ts`, `response-id-writer.ts`, `response-sync-run.ts` |
@@ -139,7 +139,7 @@ Remove-Item Env:\DATABASE_URL
 | ~~2~~ | ~~운영 상태 Sheet writer 실제 테스트~~ | 완료 | `writeOperatingStatus` 로 분리하고 `OperatingStatusSheetsClient` 주입 추가, 가짜 클라이언트로 6개 테스트 추가(`operating-status.test.ts`) |
 | 3 | 모바일·접근성 점검 | 수동+소소한 코드 | 현장에서 휴대폰 사용. 검색 폼·상태 버튼·설정 카드·전환 드롭다운 |
 | 4 | Google 연동 자동 테스트 | 자동 | 우선순위 낮음(자격증명·CI 부재, 수동 스모크로 검증됨) |
-| - | `GOOGLE_ALLOWED_EMAILS` DB 전환 | - | 하지 않는 것 권장(초대가 이미 대체 경로, 부트스트랩 잠금 위험) |
+| - | ~~`GOOGLE_ALLOWED_EMAILS` DB 전환~~ | 완료 | 가입 개방으로 허용 목록 자체 제거. `allowed-emails.ts`·env 삭제 |
 
 문서도 기능 추가 시 함께 갱신한다: 요구사항/개발명세/backlog.
 
