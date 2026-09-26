@@ -88,15 +88,14 @@ export function InviteManager({ invites }: { invites: InviteItem[] }) {
           권한이 필요합니다.
         </p>
         <p className="mt-2 text-xs leading-5 text-amber-300/90">
-          Google Cloud OAuth 동의 화면이 &quot;테스트&quot; 상태이면 그 계정이 테스트 사용자로도
-          등록되어 있어야 로그인할 수 있습니다. 외부 사용자를 제한 없이 받으려면 앱 게시(검증)가
-          필요합니다.
+          Google OAuth 앱이 미검증 상태라 초대된 사용자에게 &quot;확인되지 않은 앱&quot; 경고가
+          표시될 수 있습니다(경고를 닫고 계속하면 로그인됩니다). 경고 제거는 앱 검증이 필요합니다.
         </p>
       </div>
 
       <form className="flex flex-col gap-2 sm:flex-row" onSubmit={handleInvite}>
         <input
-          className="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-emerald-300"
+          className="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40"
           name="email"
           placeholder="name@example.com"
           required
@@ -121,7 +120,7 @@ export function InviteManager({ invites }: { invites: InviteItem[] }) {
               </span>
               {invite.status === 'REVOKED' ? null : (
                 <button
-                  className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-xs text-slate-200 transition hover:border-white/40 disabled:opacity-50"
+                  className="shrink-0 rounded-lg border border-white/15 px-3 py-2 text-xs text-slate-200 transition hover:border-white/40 disabled:opacity-50"
                   disabled={isBusy}
                   onClick={() => handleRevoke(invite.id)}
                   type="button"

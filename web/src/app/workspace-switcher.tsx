@@ -53,7 +53,7 @@ export function WorkspaceSwitcher({ memberships }: { memberships: WorkspaceSwitc
       </label>
       <select
         key={current?.workspaceId ?? 'none'}
-        className="rounded-xl border border-white/15 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-emerald-300 disabled:opacity-50"
+        className="min-h-11 rounded-xl border border-white/15 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40 disabled:opacity-50"
         defaultValue={current?.workspaceId}
         disabled={isSwitching}
         id="workspace-switcher"

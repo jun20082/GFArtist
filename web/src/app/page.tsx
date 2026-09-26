@@ -51,7 +51,7 @@ export default async function Home({
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
       <div className="mx-auto max-w-4xl">
-        <div className="flex items-start justify-between gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-300">
               Response Desk
@@ -59,14 +59,14 @@ export default async function Home({
             <h1 className="mt-2 text-2xl font-semibold">응답자 검색</h1>
             <p className="mt-2 text-sm text-slate-400">{subtitle}</p>
           </div>
-          <div className="flex items-start gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <WorkspaceSwitcher memberships={memberships} />
             <Link className="text-sm text-emerald-300 hover:text-emerald-200" href="/settings">
               Sheets 설정
             </Link>
             <form action={handleSignOut}>
               <button
-                className="rounded-xl border border-white/15 px-4 py-2 text-sm text-slate-200 transition hover:border-white/40"
+                className="min-h-11 rounded-xl border border-white/15 px-4 py-2 text-sm text-slate-200 transition hover:border-white/40"
                 type="submit"
               >
                 로그아웃

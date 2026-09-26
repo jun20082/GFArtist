@@ -35,10 +35,10 @@ type HeadersResponse = {
 };
 
 const inputClassName =
-  'mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300';
+  'mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40';
 
 const selectClassName =
-  'mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300';
+  'mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40';
 
 const autoOption = { value: '', label: '자동 인식' };
 const noneOption = { value: unmappedColumnValue, label: '사용 안 함' };
@@ -289,7 +289,7 @@ export function SourceSettingsForm({
         Google Sheets URL 또는 ID
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input
-            className="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+            className="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40"
             name="spreadsheetUrlOrId"
             onChange={(event) => setSpreadsheetValue(event.target.value)}
             placeholder="https://docs.google.com/spreadsheets/d/..."

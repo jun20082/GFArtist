@@ -64,7 +64,7 @@ export function MemberManager({ members }: { members: MemberItem[] }) {
             </span>
             {member.canRemove ? (
               <button
-                className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-xs text-slate-200 transition hover:border-rose-300/60 disabled:opacity-50"
+                className="shrink-0 rounded-lg border border-white/15 px-3 py-2 text-xs text-slate-200 transition hover:border-rose-300/60 disabled:opacity-50"
                 disabled={isBusy}
                 onClick={() => handleRemove(member)}
                 type="button"

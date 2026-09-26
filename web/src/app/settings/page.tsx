@@ -75,7 +75,7 @@ export default async function SettingsPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-start justify-between gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-300">
               Settings
@@ -85,7 +85,7 @@ export default async function SettingsPage() {
               원본 응답 탭과 같은 Spreadsheet의 운영 상태 탭을 연결합니다.
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-start gap-2 sm:items-end">
             <Link className="text-sm text-emerald-300 hover:text-emerald-200" href="/">
               응답자 검색
             </Link>

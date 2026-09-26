@@ -78,7 +78,7 @@ export function WorkspaceMembershipActions({
         <label className="block text-sm text-slate-200">
           확인을 위해 워크스페이스 이름(&quot;{workspaceName}&quot;)을 입력하세요
           <input
-            className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-rose-300"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-300/40"
             onChange={(event) => setConfirmName(event.target.value)}
             value={confirmName}
           />

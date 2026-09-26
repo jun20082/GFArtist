@@ -82,7 +82,8 @@ export function ResponseActions({
         <div className="mt-2 flex flex-wrap gap-2">
           {categories.map((category) => (
             <button
-              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition disabled:opacity-50 ${
+              aria-pressed={category.code === selected.categoryCode}
+              className={`flex min-h-11 items-center gap-2 rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
                 category.code === selected.categoryCode
                   ? 'border-emerald-300 bg-emerald-300/10'
                   : 'border-white/15 hover:border-white/40'
@@ -105,9 +106,10 @@ export function ResponseActions({
 
       <div>
         <p className="text-sm text-slate-400">입장 여부</p>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           <button
-            className={`rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
+            aria-pressed={selected.entryStatus === 'ENTERED'}
+            className={`min-h-11 rounded-xl border px-5 py-2 text-sm transition disabled:opacity-50 ${
               selected.entryStatus === 'ENTERED'
                 ? 'border-emerald-300 bg-emerald-300/10'
                 : 'border-white/15 hover:border-white/40'
@@ -119,7 +121,8 @@ export function ResponseActions({
             입장 완료
           </button>
           <button
-            className={`rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
+            aria-pressed={selected.entryStatus === 'NOT_ENTERED'}
+            className={`min-h-11 rounded-xl border px-5 py-2 text-sm transition disabled:opacity-50 ${
               selected.entryStatus === 'NOT_ENTERED'
                 ? 'border-emerald-300 bg-emerald-300/10'
                 : 'border-white/15 hover:border-white/40'
@@ -135,9 +138,10 @@ export function ResponseActions({
 
       <div>
         <p className="text-sm text-slate-400">상품 수령 여부</p>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           <button
-            className={`rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
+            aria-pressed={selected.productStatus === 'RECEIVED'}
+            className={`min-h-11 rounded-xl border px-5 py-2 text-sm transition disabled:opacity-50 ${
               selected.productStatus === 'RECEIVED'
                 ? 'border-sky-300 bg-sky-300/10'
                 : 'border-white/15 hover:border-white/40'
@@ -149,7 +153,8 @@ export function ResponseActions({
             수령 완료
           </button>
           <button
-            className={`rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 ${
+            aria-pressed={selected.productStatus === 'NOT_RECEIVED'}
+            className={`min-h-11 rounded-xl border px-5 py-2 text-sm transition disabled:opacity-50 ${
               selected.productStatus === 'NOT_RECEIVED'
                 ? 'border-sky-300 bg-sky-300/10'
                 : 'border-white/15 hover:border-white/40'

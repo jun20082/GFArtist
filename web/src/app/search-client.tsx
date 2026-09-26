@@ -79,7 +79,7 @@ export function SearchClient({
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
             aria-label="이름 또는 전화번호 검색"
-            className="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+            className="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40"
             name="q"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="이름 또는 전화번호 (뒷자리 가능)"
@@ -97,7 +97,7 @@ export function SearchClient({
           <label className="flex-1 text-xs text-slate-400">
             입장 여부
             <select
-              className="mt-1 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-emerald-300"
+              className="mt-1 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40"
               name="entry"
               onChange={(event) => setEntry(event.target.value)}
               value={entry}
@@ -112,7 +112,7 @@ export function SearchClient({
           <label className="flex-1 text-xs text-slate-400">
             상품 수령 여부
             <select
-              className="mt-1 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-emerald-300"
+              className="mt-1 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40"
               name="product"
               onChange={(event) => setProduct(event.target.value)}
               value={product}
@@ -150,7 +150,7 @@ export function SearchClient({
               aria-label={`${response.name}, ${response.category.name}, ${
                 response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'
               }, ${response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'}`}
-              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-white/30 focus-visible:border-emerald-300 focus-visible:outline-none"
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               href={`/responses/${response.id}`}
             >
               <span
