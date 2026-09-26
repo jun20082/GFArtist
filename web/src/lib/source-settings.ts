@@ -146,25 +146,35 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
 
   const mapping = input.mapping;
 
-  const saved = await prisma.sourceSettings.upsert({
-    where: { workspaceId: workspace.id },
-    create: {
-      workspaceId: workspace.id,
-      partyName: input.partyName,
-      spreadsheetId: input.spreadsheetId,
-      responseSheetName: input.responseSheetName,
-      operatingStatusSheetName: input.operatingStatusSheetName,
-      displayColumns: input.displayColumns,
-      ...mapping,
-    },
-    update: {
-      partyName: input.partyName,
-      spreadsheetId: input.spreadsheetId,
-      responseSheetName: input.responseSheetName,
-      operatingStatusSheetName: input.operatingStatusSheetName,
-      displayColumns: input.displayColumns,
-      ...mapping,
-    },
+  const saved = await prisma.$transaction(async (tx) => {
+    const settings = await tx.sourceSettings.upsert({
+      where: { workspaceId: workspace.id },
+      create: {
+        workspaceId: workspace.id,
+        partyName: input.partyName,
+        spreadsheetId: input.spreadsheetId,
+        responseSheetName: input.responseSheetName,
+        operatingStatusSheetName: input.operatingStatusSheetName,
+        displayColumns: input.displayColumns,
+        ...mapping,
+      },
+      update: {
+        partyName: input.partyName,
+        spreadsheetId: input.spreadsheetId,
+        responseSheetName: input.responseSheetName,
+        operatingStatusSheetName: input.operatingStatusSheetName,
+        displayColumns: input.displayColumns,
+        ...mapping,
+      },
+    });
+
+    // The workspace is shown by its party name everywhere, so keep them in sync.
+    await tx.workspace.update({
+      where: { id: workspace.id },
+      data: { name: input.partyName },
+    });
+
+    return settings;
   });
 
   invalidateSourceSettingsCache(userId);

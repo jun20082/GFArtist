@@ -97,6 +97,16 @@ describe('saveSourceSettings', () => {
     assert.equal(membership.role, 'OWNER');
   });
 
+  test('설정을 저장하면 워크스페이스 이름이 파티명으로 바뀐다', async () => {
+    await resetWithUsers(TEST_USER_ID);
+    const workspace = await createOwnedWorkspace(TEST_USER_ID, '처음 이름');
+
+    await saveSourceSettings(TEST_USER_ID, buildSettings({ partyName: '새 파티명' }));
+
+    const refreshed = await prisma.workspace.findUniqueOrThrow({ where: { id: workspace.id } });
+    assert.equal(refreshed.name, '새 파티명');
+  });
+
   test('같은 워크스페이스에서 다시 저장해도 행이 늘지 않는다', async () => {
     await resetWithUsers(TEST_USER_ID);
     await createOwnedWorkspace(TEST_USER_ID, '테스트 파티');
