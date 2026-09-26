@@ -39,13 +39,8 @@ export default function AboutPage() {
 
         <p className="mt-10 text-xs text-slate-500">
           문의:{' '}
-          <a
-            className="text-slate-400 hover:text-slate-300"
-            href="https://github.com/jun20082/GFArtist/issues"
-            rel="noreferrer"
-            target="_blank"
-          >
-            github.com/jun20082/GFArtist/issues
+          <a className="text-slate-400 hover:text-slate-300" href="mailto:jun20082@gmail.com">
+            jun20082@gmail.com
           </a>
         </p>
       </article>

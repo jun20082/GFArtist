@@ -67,15 +67,10 @@ export default function PrivacyPage() {
         <h2 className="mt-10 text-lg font-semibold text-white">7. 문의</h2>
         <p className="mt-3">
           본 방침에 대한 문의는{' '}
-          <a
-            className="text-emerald-300 hover:text-emerald-200"
-            href="https://github.com/jun20082/GFArtist/issues"
-            rel="noreferrer"
-            target="_blank"
-          >
-            github.com/jun20082/GFArtist/issues
+          <a className="text-emerald-300 hover:text-emerald-200" href="mailto:jun20082@gmail.com">
+            jun20082@gmail.com
           </a>
-          로 보내주세요.
+          으로 보내주세요.
         </p>
       </article>
     </main>

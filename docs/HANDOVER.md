@@ -135,7 +135,7 @@ Remove-Item Env:\DATABASE_URL
 
 | 순위 | 작업 | 성격 | 비고 |
 |---|---|---|---|
-| 1 | Google OAuth 게시 상태 확인·전환 | 수동·외부 | 외부 프로덕션 전환에 유효 앱 이름·지원 이메일·홈페이지 URL·개인정보 URL 필요(Phase 0에서 확인). 공개 페이지 `/about`·`/privacy` 추가 완료. 남은 것: 콘솔 Branding 입력 후 게시. 장기 C(커스텀 도메인+검증)/D(drive.file+Picker) 보류 |
+| ~~1~~ | ~~Google OAuth 게시 상태 확인·전환~~ | 완료 | External + In production 전환 완료(미검증). 공개 페이지 `/about`·`/privacy` 추가, 지원 이메일 `jun20082@gmail.com`. 경고창·민감 scope 100명 lifetime cap 남음. 장기 C(커스텀 도메인+검증)/D(drive.file+Picker) 보류 |
 | ~~2~~ | ~~운영 상태 Sheet writer 실제 테스트~~ | 완료 | `writeOperatingStatus` 로 분리하고 `OperatingStatusSheetsClient` 주입 추가, 가짜 클라이언트로 6개 테스트 추가(`operating-status.test.ts`) |
 | 3 | 모바일·접근성 점검 | 수동+소소한 코드 | 현장에서 휴대폰 사용. 검색 폼·상태 버튼·설정 카드·전환 드롭다운 |
 | 4 | Google 연동 자동 테스트 | 자동 | 우선순위 낮음(자격증명·CI 부재, 수동 스모크로 검증됨) |
@@ -151,7 +151,7 @@ Remove-Item Env:\DATABASE_URL
 - **운영 마이그레이션이 로컬에 적용되는 실수.** `DATABASE_URL` 미설정 또는 마스킹된 비밀번호(`******`)로 실행하면 `localhost:5432` 로 붙는다. 항상 `Datasource` 줄의 호스트를 확인.
 - **Neon 브랜치 혼동.** 콘솔에서 백업 브랜치가 선택된 상태로 URL을 복사하면 엉뚱한 브랜치에 적용된다. main 브랜치 선택을 확인.
 - **Docker Desktop 데몬이 자주 꺼진다.** 테스트가 갑자기 대량 실패하면 이것부터 확인.
-- **Google OAuth 테스트 상태 제약.** 초대만으로 로그인이 보장되지 않는다. 앱 로그인 판정(`invites.ts`)과 Google 단계는 별개.
+- **Google OAuth는 External + In production(미검증).** 테스트 사용자 제한·7일 refresh token 만료는 해소됨. 대신 미검증 앱 경고창과 민감 scope 100명 lifetime cap이 남는다. 브랜드 검증은 커스텀 도메인 없이는 불가(vercel.app은 소유 확인 불가). 게시 상태는 Google Auth Platform → Audience에서 확인.
 - **`SourceSettings.isActive` 는 제거됨.** 활성 파티 개념은 "현재 워크스페이스"로 대체.
 - **Apps Script 통합은 제거됨.** `apps-script/` 디렉터리, `GOOGLE_APPS_SCRIPT_*`, `APP_ENCRYPTION_KEY` 모두 삭제. 관련 코드를 다시 참조하지 말 것.
 - 로그인 페이지는 엣지 캐시되므로 배포 확인 시 이전과 다른 build id 를 기준으로 판단한다(배포가 먼저 끝나 `before` 값이 이미 신규일 수 있음 → 직전에 기록한 id 와 비교).
@@ -185,7 +185,7 @@ web/prisma/schema.prisma                     데이터 모델
 ## 9. 사용자 확인이 필요한 항목 (이 시점 기준)
 
 ```text
-1  Google Cloud OAuth 동의 화면 게시 상태 (테스트 / 프로덕션(미검증) / Internal)
-2  외부(비테스트 사용자) 계정을 실제로 받을 계획 여부 → OAuth 작업 우선순위 결정
+1  Google Cloud OAuth 게시 상태 → External + In production(미검증)으로 전환 완료
+2  외부 계정 수용 → 확정(다중 소유자 셀프서비스가 목표). 장기 C/D 경로 미결
 3  행사 운영을 휴대폰으로 하는지 → 모바일 점검 우선순위 결정
 ```
