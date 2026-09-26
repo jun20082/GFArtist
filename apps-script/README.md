@@ -29,11 +29,16 @@
 ```json
 {
   "action": "ensure_ids",
-  "secret": "SET_IN_SERVER_ENVIRONMENT"
+  "secret": "SET_IN_SERVER_ENVIRONMENT",
+  "sheetName": "설문지 응답"
 }
 ```
 
 응답에는 `generatedCount`와 `totalResponseCount`가 포함됩니다.
+
+`sheetName`은 웹사이트의 `Sheets 설정`에 저장된 원본 응답 탭 이름입니다. 값이 있으면 그 이름을
+사용하고, 없으면 스크립트 속성 `RESPONSE_SHEET_NAME`으로 돌아갑니다. 이 덕분에 탭 이름을 바꿔도
+스크립트 속성을 함께 고칠 필요가 없습니다.
 
 ## 원본 응답 컬럼
 
