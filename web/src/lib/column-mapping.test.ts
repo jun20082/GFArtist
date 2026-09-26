@@ -105,9 +105,24 @@ describe('resolveColumnMapping', () => {
       () => resolveColumnMapping(headers),
       (error: unknown) =>
         error instanceof ColumnMappingError &&
-        /전화번호, 성별, 주문 상품, 내부 ID/.test(error.message) &&
+        /전화번호, 성별, 주문 상품/.test(error.message) &&
+        !/내부 ID/.test(error.message) &&
         /시트 헤더: 이름, 비고/.test(error.message),
     );
+  });
+
+  test('내부 ID 컬럼이 없어도 서버가 만들 것이므로 통과한다', () => {
+    const headers = ['타임스탬프', '이름', '전화번호', '성별', '주문 상품'];
+
+    assert.deepEqual(resolveColumnMapping(headers), defaultColumnMapping);
+  });
+
+  test('지정한 내부 ID 헤더가 시트에 없으면 그 이름을 그대로 쓴다', () => {
+    const headers = ['이름', '전화번호', '성별', '주문 상품'];
+
+    const mapping = resolveColumnMapping(headers, { internalResponseIdHeader: 'row_id' });
+
+    assert.equal(mapping.internalResponseIdHeader, 'row_id');
   });
 });
 

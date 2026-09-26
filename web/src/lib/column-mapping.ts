@@ -36,6 +36,12 @@ export const columnAliases: Record<keyof ColumnMapping, readonly string[]> = {
 
 const mappingKeys = Object.keys(defaultColumnMapping) as (keyof ColumnMapping)[];
 
+/**
+ * The internal id column is created by the server during sync, so it must not
+ * be required to exist in the sheet when the connection is saved.
+ */
+const requiredAtConnectKeys = mappingKeys.filter((key) => key !== 'internalResponseIdHeader');
+
 export class ColumnMappingError extends Error {
   constructor(message: string) {
     super(message);
@@ -61,7 +67,7 @@ export function resolveColumnMapping(
   const unknown: string[] = [];
   const missing: string[] = [];
 
-  for (const key of mappingKeys) {
+  for (const key of requiredAtConnectKeys) {
     const preferredValue = preferred[key]?.trim();
 
     if (preferredValue) {
@@ -87,6 +93,15 @@ export function resolveColumnMapping(
 
     missing.push(columnMappingLabels[key]);
   }
+
+  const preferredId = preferred.internalResponseIdHeader?.trim();
+  const idMatch = preferredId
+    ? normalizedHeaders.get(normalize(preferredId)) ?? preferredId
+    : columnAliases.internalResponseIdHeader
+        .map((alias) => normalizedHeaders.get(normalize(alias)))
+        .find((header): header is string => Boolean(header));
+
+  resolved.internalResponseIdHeader = idMatch ?? defaultColumnMapping.internalResponseIdHeader;
 
   if (unknown.length > 0 || missing.length > 0) {
     const reasons: string[] = [];
