@@ -28,7 +28,7 @@ Google Forms 응답을 Google Sheets에서 가져와 검색하고, 현장 운영
 | 운영 상태 동기화 | 상태 변경 시 DB 저장 후 `after()`로 응답 전송 뒤 Sheet 반영, 상태/오류 기록·재시도 | `web/src/lib/operating-status.ts`, `web/src/app/api/responses/[id]/route.ts` |
 | 중복 행 정리 | 중복 ID 탐지·병합·삭제, 중복 감지 시 동기화 중단 | `web/src/lib/duplicate-rows.ts`, `operating-status-duplicates.ts` |
 
-- 테스트: `web/src/lib/*.test.ts` 16개 파일, 151개 테스트 통과.
+- 테스트: `web/src/lib/*.test.ts` 16개 파일, 157개 테스트 통과.
 - 운영: Vercel 프로젝트 `GFArtist`, `https://gf-artist.vercel.app`, 함수 리전 `sin1`(싱가포르, `web/vercel.json`), DB는 Neon(ap-southeast-1).
 
 ---
@@ -136,7 +136,7 @@ Remove-Item Env:\DATABASE_URL
 | 순위 | 작업 | 성격 | 비고 |
 |---|---|---|---|
 | 1 | Google OAuth 게시 상태 확인·전환 | 수동·외부 | 테스트 상태면 초대 계정도 Google 테스트 사용자여야 로그인 가능, refresh token 7일 만료. 상태 확인만 5분 |
-| 2 | 운영 상태 Sheet writer 실제 테스트 | 자동 코드 | `operating-status.test.ts` 는 모두 가짜 writer → 실제 `defaultOperatingStatusWriter` 무테스트. `response-id-writer.ts` 의 클라이언트 주입 패턴을 그대로 적용 (1~2시간) |
+| ~~2~~ | ~~운영 상태 Sheet writer 실제 테스트~~ | 완료 | `writeOperatingStatus` 로 분리하고 `OperatingStatusSheetsClient` 주입 추가, 가짜 클라이언트로 6개 테스트 추가(`operating-status.test.ts`) |
 | 3 | 모바일·접근성 점검 | 수동+소소한 코드 | 현장에서 휴대폰 사용. 검색 폼·상태 버튼·설정 카드·전환 드롭다운 |
 | 4 | Google 연동 자동 테스트 | 자동 | 우선순위 낮음(자격증명·CI 부재, 수동 스모크로 검증됨) |
 | - | `GOOGLE_ALLOWED_EMAILS` DB 전환 | - | 하지 않는 것 권장(초대가 이미 대체 경로, 부트스트랩 잠금 위험) |

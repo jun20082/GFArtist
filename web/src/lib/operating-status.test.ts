@@ -8,10 +8,13 @@ import {
   findOperatingStatusRowIndexes,
   retryPendingStatusSync,
   syncResponseStatus,
+  writeOperatingStatus,
+  type OperatingStatusSheetsClient,
   type OperatingStatusWriter,
   type ResponseForSync,
 } from './operating-status';
 import { prisma, resetDatabase, seedDefaultCategories, createSourceSettings, createResponse } from './test-db';
+import type { SourceSettings } from '@/generated/prisma/client';
 
 const sample: ResponseForSync = {
   id: 'row-1',
@@ -79,6 +82,137 @@ describe('운영 상태 순수 함수', () => {
       () => assertSingleOperatingStatusRow([4, 7], 'resp_a'),
       /같은 내부 ID가 2개 행 있습니다\(resp_a\)/,
     );
+  });
+});
+
+describe('writeOperatingStatus 실제 writer', () => {
+  const settings = {
+    spreadsheetId: 'sheet-1',
+    operatingStatusSheetName: '운영 상태',
+  } as SourceSettings;
+
+  type Call = { kind: 'get' | 'update' | 'append'; range: string; values?: string[][] };
+
+  function fakeSheet(initialRows: unknown[][]) {
+    const rows = initialRows.map((row) => [...row]);
+    const calls: Call[] = [];
+
+    const client: OperatingStatusSheetsClient = {
+      spreadsheets: {
+        values: {
+          get: async (params) => {
+            calls.push({ kind: 'get', range: params.range });
+            return { data: { values: rows.map((row) => [...row]) } };
+          },
+          update: async (params) => {
+            calls.push({ kind: 'update', range: params.range, values: params.requestBody.values });
+            return {};
+          },
+          append: async (params) => {
+            calls.push({ kind: 'append', range: params.range, values: params.requestBody.values });
+            return {};
+          },
+        },
+      },
+    };
+
+    return { client, calls };
+  }
+
+  test('탭이 비어 있으면 헤더를 먼저 쓰고 append한다', async () => {
+    const { client, calls } = fakeSheet([]);
+
+    const result = await writeOperatingStatus('user-1', settings, sample, client);
+
+    assert.deepEqual(result, { action: 'appended' });
+    assert.equal(calls[0].kind, 'get');
+    assert.equal(calls[0].range, `'운영 상태'!A:Z`);
+    assert.equal(calls[1].kind, 'update');
+    assert.equal(calls[1].range, `'운영 상태'!A1`);
+    assert.deepEqual(calls[1].values, [
+      ['_internal_response_id', '이름', '전화번호', '입장 여부', '상품 수령 여부'],
+    ]);
+    assert.equal(calls[2].kind, 'append');
+    assert.equal(calls[2].range, `'운영 상태'!A1`);
+    assert.deepEqual(calls[2].values, [
+      ['resp_test_1', '허준범', '010-5801-5539', '입장 완료', '미수령'],
+    ]);
+  });
+
+  test('같은 내부 ID 행이 있으면 관리 컬럼만 덮어쓴다', async () => {
+    const { client, calls } = fakeSheet([
+      ['_internal_response_id', '이름', '비고', '전화번호', '입장 여부', '상품 수령 여부'],
+      ['resp_other', '다른사람', '메모', '010-0000', '미입장', '미수령'],
+      ['resp_test_1', '허준범', '수동 메모', '010-5801-5539', '미입장', '미수령'],
+    ]);
+
+    const result = await writeOperatingStatus('user-1', settings, sample, client);
+
+    assert.deepEqual(result, { action: 'updated', rowNumber: 3 });
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].kind, 'update');
+    assert.equal(calls[1].range, `'운영 상태'!A3:F3`);
+    assert.deepEqual(calls[1].values, [
+      ['resp_test_1', '허준범', '수동 메모', '010-5801-5539', '입장 완료', '미수령'],
+    ]);
+  });
+
+  test('아이디가 없으면 끝에 append한다', async () => {
+    const { client, calls } = fakeSheet([
+      ['_internal_response_id', '이름', '전화번호', '입장 여부', '상품 수령 여부'],
+      ['resp_other', '다른사람', '010-0000', '미입장', '미수령'],
+    ]);
+
+    const result = await writeOperatingStatus('user-1', settings, sample, client);
+
+    assert.deepEqual(result, { action: 'appended' });
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].kind, 'append');
+    assert.deepEqual(calls[1].values, [
+      ['resp_test_1', '허준범', '010-5801-5539', '입장 완료', '미수령'],
+    ]);
+  });
+
+  test('중복 내부 ID면 시트를 쓰지 않고 거부한다', async () => {
+    const { client, calls } = fakeSheet([
+      ['_internal_response_id', '이름', '전화번호', '입장 여부', '상품 수령 여부'],
+      ['resp_test_1', '허준범', '010-5801-5539', '미입장', '미수령'],
+      ['resp_test_1', '허준범', '010-5801-5539', '미입장', '미수령'],
+    ]);
+
+    await assert.rejects(
+      () => writeOperatingStatus('user-1', settings, sample, client),
+      /같은 내부 ID가 2개 행 있습니다\(resp_test_1\)/,
+    );
+    assert.equal(calls.every((call) => call.kind === 'get'), true);
+  });
+
+  test('_internal_response_id 컬럼이 없으면 거부한다', async () => {
+    const { client, calls } = fakeSheet([
+      ['이름', '전화번호', '입장 여부', '상품 수령 여부'],
+      ['허준범', '010-5801-5539', '미입장', '미수령'],
+    ]);
+
+    await assert.rejects(
+      () => writeOperatingStatus('user-1', settings, sample, client),
+      /_internal_response_id 컬럼이 없습니다/,
+    );
+    assert.equal(calls.length, 1);
+  });
+
+  test('탭 이름의 작은따옴표를 이스케이프한다', async () => {
+    const { client, calls } = fakeSheet([
+      ['_internal_response_id', '이름', '전화번호', '입장 여부', '상품 수령 여부'],
+    ]);
+
+    await writeOperatingStatus(
+      'user-1',
+      { ...settings, operatingStatusSheetName: "홍길동's 운영" } as SourceSettings,
+      sample,
+      client,
+    );
+
+    assert.equal(calls[0].range, `'홍길동''s 운영'!A:Z`);
   });
 });
 

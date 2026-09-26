@@ -1,7 +1,6 @@
 import { StatusSyncState } from '@/generated/prisma/enums';
 import type { EntryStatus, ProductStatus } from '@/generated/prisma/enums';
 import type { SourceSettings } from '@/generated/prisma/client';
-import { getSheetsClient, quoteSheetName } from '@/lib/google-sheets';
 import { prisma } from '@/lib/prisma';
 import { getWorkspaceContext } from '@/lib/workspace';
 import {
@@ -9,6 +8,7 @@ import {
   formatEntryStatus,
   formatProductStatus,
   operatingStatusHeaders,
+  quoteSheetName,
 } from '@/lib/sheet-format';
 
 export type ResponseForSync = {
@@ -92,12 +92,49 @@ export function assertSingleOperatingStatusRow(
   }
 }
 
-const defaultOperatingStatusWriter: OperatingStatusWriter = async (
-  userId,
-  sourceSettings,
-  response,
-) => {
-  const sheets = await getSheetsClient(userId);
+/** Minimal Sheets surface so tests can pass a fake client. */
+export type OperatingStatusSheetsClient = {
+  spreadsheets: {
+    values: {
+      get: (params: {
+        spreadsheetId: string;
+        range: string;
+      }) => Promise<{ data: { values?: unknown[][] } }>;
+      update: (params: {
+        spreadsheetId: string;
+        range: string;
+        valueInputOption: 'RAW';
+        requestBody: { values: string[][] };
+      }) => Promise<unknown>;
+      append: (params: {
+        spreadsheetId: string;
+        range: string;
+        valueInputOption: 'RAW';
+        insertDataOption: 'INSERT_ROWS';
+        requestBody: { values: string[][] };
+      }) => Promise<unknown>;
+    };
+  };
+};
+
+/**
+ * Writes the operating status of one response to the source spreadsheet's
+ * operating status tab. Only the managed columns are written; respondent
+ * columns such as 비고 are preserved.
+ */
+export async function writeOperatingStatus(
+  userId: string,
+  sourceSettings: SourceSettings,
+  response: ResponseForSync,
+  sheetsClient?: OperatingStatusSheetsClient,
+): Promise<OperatingStatusWriteResult> {
+  let sheets = sheetsClient;
+
+  if (!sheets) {
+    const { getSheetsClient } = await import('@/lib/google-sheets');
+    sheets = (await getSheetsClient(userId)) as unknown as OperatingStatusSheetsClient;
+  }
+
   const prefix = quoteSheetName(sourceSettings.operatingStatusSheetName);
   const spreadsheetId = sourceSettings.spreadsheetId;
 
@@ -157,7 +194,9 @@ const defaultOperatingStatusWriter: OperatingStatusWriter = async (
     requestBody: { values: [values] },
   });
   return { action: 'appended' };
-};
+}
+
+const defaultOperatingStatusWriter: OperatingStatusWriter = writeOperatingStatus;
 
 const SYNC_LOCK_TIMEOUT = '10s';
 const SYNC_TRANSACTION_TIMEOUT_MS = 25_000;
