@@ -135,7 +135,7 @@ Remove-Item Env:\DATABASE_URL
 
 | 순위 | 작업 | 성격 | 비고 |
 |---|---|---|---|
-| 1 | Google OAuth 게시 상태 확인·전환 | 수동·외부 | 테스트 상태면 초대 계정도 Google 테스트 사용자여야 로그인 가능, refresh token 7일 만료. 상태 확인만 5분 |
+| 1 | Google OAuth 게시 상태 확인·전환 | 수동·외부 | 외부 프로덕션 전환에 유효 앱 이름·지원 이메일·홈페이지 URL·개인정보 URL 필요(Phase 0에서 확인). 공개 페이지 `/about`·`/privacy` 추가 완료. 남은 것: 콘솔 Branding 입력 후 게시. 장기 C(커스텀 도메인+검증)/D(drive.file+Picker) 보류 |
 | ~~2~~ | ~~운영 상태 Sheet writer 실제 테스트~~ | 완료 | `writeOperatingStatus` 로 분리하고 `OperatingStatusSheetsClient` 주입 추가, 가짜 클라이언트로 6개 테스트 추가(`operating-status.test.ts`) |
 | 3 | 모바일·접근성 점검 | 수동+소소한 코드 | 현장에서 휴대폰 사용. 검색 폼·상태 버튼·설정 카드·전환 드롭다운 |
 | 4 | Google 연동 자동 테스트 | 자동 | 우선순위 낮음(자격증명·CI 부재, 수동 스모크로 검증됨) |
@@ -173,6 +173,8 @@ web/src/lib/response-sync.ts                 DB upsert(트랜잭션 핸들 주�
 web/src/lib/response-sync-run.ts             동기화 오케스트레이션·권한·lock
 web/src/lib/operating-status.ts              운영 상태 Sheet writer·재시도·이상 감지
 web/src/lib/responses.ts                     검색 쿼리
+web/src/app/about/page.tsx                   공개 소개 페이지 (OAuth 브랜딩용, 인증 없음)
+web/src/app/privacy/page.tsx                 공개 개인정보처리방침 (OAuth 브랜딩용, 인증 없음)
 web/src/app/api/**                           API 라우트
 web/src/app/settings/**                      설정 화면 카드들
 web/prisma/schema.prisma                     데이터 모델
