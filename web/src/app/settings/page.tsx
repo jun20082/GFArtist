@@ -5,7 +5,7 @@ import { SourceSettingsForm } from '@/app/settings/source-settings-form';
 import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
 import { CleanupDuplicatesButton } from '@/app/settings/cleanup-duplicates-button';
-import { getWorkspaceSourceSettings } from '@/lib/source-settings';
+import { getWorkspaceContext, workspaceRoleLabels } from '@/lib/workspace';
 import { StatusSyncState } from '@/generated/prisma/enums';
 import { prisma } from '@/lib/prisma';
 
@@ -22,7 +22,10 @@ export default async function SettingsPage() {
     redirect('/login');
   }
 
-  const sourceSettings = await getWorkspaceSourceSettings(session.user.id);
+  const context = await getWorkspaceContext(session.user.id);
+  const sourceSettings = context?.sourceSettings ?? null;
+  const roleLabel = context ? workspaceRoleLabels[context.role] : null;
+  const canEditSettings = !context || context.role === 'OWNER';
   const pendingCount = sourceSettings
     ? await prisma.response.count({
         where: {
@@ -55,17 +58,28 @@ export default async function SettingsPage() {
             응답자 검색
           </Link>
         </div>
-        {sourceSettings ? (
+        {context ? (
           <dl className="mt-6 space-y-1 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            <div>파티명: {sourceSettings.partyName}</div>
-            <div>원본 탭: {sourceSettings.responseSheetName}</div>
-            <div>운영 상태 탭: {sourceSettings.operatingStatusSheetName}</div>
             <div>
-              마지막 동기화:{' '}
-              {sourceSettings.lastResponseSyncAt
-                ? formatKoreaTime(sourceSettings.lastResponseSyncAt)
-                : '없음'}
+              워크스페이스: {context.workspace.name} · 내 역할: {roleLabel}
             </div>
+            {sourceSettings ? (
+              <>
+                <div>파티명: {sourceSettings.partyName}</div>
+                <div>원본 탭: {sourceSettings.responseSheetName}</div>
+                <div>운영 상태 탭: {sourceSettings.operatingStatusSheetName}</div>
+                <div>
+                  마지막 동기화:{' '}
+                  {sourceSettings.lastResponseSyncAt
+                    ? formatKoreaTime(sourceSettings.lastResponseSyncAt)
+                    : '없음'}
+                </div>
+              </>
+            ) : (
+              <div className="text-amber-300">
+                아직 시트가 연결되지 않았습니다. 아래에서 연결하세요.
+              </div>
+            )}
             <div>
               최근 동기화 결과:{' '}
               {lastSyncRun
@@ -78,27 +92,44 @@ export default async function SettingsPage() {
               <div className="text-rose-300">동기화 오류: {lastSyncRun.errorMessage}</div>
             ) : null}
           </dl>
-        ) : null}
+        ) : (
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+            <p className="font-medium text-white">새 워크스페이스를 만듭니다</p>
+            <p className="mt-2 leading-6">
+              아래에서 자기 파티의 Google Sheets를 연결하면 이 계정의 워크스페이스가 만들어집니다.
+            </p>
+          </div>
+        )}
         <div className="mt-8">
-          <SourceSettingsForm
-            appsScriptUrl={sourceSettings?.appsScriptUrl ?? null}
-            hasAppsScriptSecret={Boolean(sourceSettings?.appsScriptSecretEncrypted)}
-            partyName={sourceSettings?.partyName ?? null}
-            responseSheetName={sourceSettings?.responseSheetName ?? null}
-            spreadsheetId={sourceSettings?.spreadsheetId ?? null}
-            operatingStatusSheetName={sourceSettings?.operatingStatusSheetName ?? null}
-            columnMapping={
-              sourceSettings
-                ? {
-                    nameHeader: sourceSettings.nameHeader,
-                    phoneHeader: sourceSettings.phoneHeader,
-                    genderHeader: sourceSettings.genderHeader,
-                    orderedProductHeader: sourceSettings.orderedProductHeader,
-                    internalResponseIdHeader: sourceSettings.internalResponseIdHeader,
-                  }
-                : null
-            }
-          />
+          {canEditSettings ? (
+            <SourceSettingsForm
+              appsScriptUrl={sourceSettings?.appsScriptUrl ?? null}
+              hasAppsScriptSecret={Boolean(sourceSettings?.appsScriptSecretEncrypted)}
+              partyName={sourceSettings?.partyName ?? null}
+              responseSheetName={sourceSettings?.responseSheetName ?? null}
+              spreadsheetId={sourceSettings?.spreadsheetId ?? null}
+              operatingStatusSheetName={sourceSettings?.operatingStatusSheetName ?? null}
+              columnMapping={
+                sourceSettings
+                  ? {
+                      nameHeader: sourceSettings.nameHeader,
+                      phoneHeader: sourceSettings.phoneHeader,
+                      genderHeader: sourceSettings.genderHeader,
+                      orderedProductHeader: sourceSettings.orderedProductHeader,
+                      internalResponseIdHeader: sourceSettings.internalResponseIdHeader,
+                    }
+                  : null
+              }
+            />
+          ) : (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-slate-300">
+              <p className="font-medium text-white">Sheets 설정은 소유자만 변경할 수 있습니다</p>
+              <p className="mt-2 leading-6">
+                현재 역할은 {roleLabel}입니다. 연결 정보를 바꾸려면 워크스페이스 소유자에게
+                요청하세요. 응답 동기화와 상태 변경은 계속 사용할 수 있습니다.
+              </p>
+            </div>
+          )}
         </div>
         <div className="mt-6">
           <SyncResponsesButton />

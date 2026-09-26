@@ -8,6 +8,11 @@ export type WorkspaceContext = {
   sourceSettings: SourceSettings | null;
 };
 
+export const workspaceRoleLabels: Record<WorkspaceRole, string> = {
+  OWNER: '소유자',
+  OPERATOR: '운영자',
+};
+
 /**
  * A user currently belongs to a single workspace. If several memberships exist
  * one day, the oldest one stays the default.
