@@ -6,7 +6,9 @@ import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
 import { CleanupDuplicatesButton } from '@/app/settings/cleanup-duplicates-button';
 import { InviteManager } from '@/app/settings/invite-manager';
+import { MemberManager } from '@/app/settings/member-manager';
 import { listWorkspaceInvites } from '@/lib/invites';
+import { listWorkspaceMembers } from '@/lib/workspace-members';
 import { getWorkspaceContext, getWorkspaceMemberships, workspaceRoleLabels } from '@/lib/workspace';
 import { WorkspaceSwitcher } from '@/app/workspace-switcher';
 import { StatusSyncState } from '@/generated/prisma/enums';
@@ -65,6 +67,8 @@ export default async function SettingsPage() {
     context?.role === 'OWNER'
       ? await loadInvites(context.workspace.id)
       : { invites: [] as Awaited<ReturnType<typeof listWorkspaceInvites>>, error: null };
+  const members =
+    context?.role === 'OWNER' ? await listWorkspaceMembers(context.workspace.id) : [];
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
@@ -194,6 +198,19 @@ export default async function SettingsPage() {
                 acceptedAt: invite.acceptedAt
                   ? formatKoreaTime(invite.acceptedAt)
                   : null,
+              }))}
+            />
+          </div>
+        ) : null}
+        {context?.role === 'OWNER' ? (
+          <div className="mt-6">
+            <MemberManager
+              members={members.map((member) => ({
+                userId: member.userId,
+                label: member.email ?? member.name ?? member.userId,
+                role: workspaceRoleLabels[member.role],
+                joinedAt: formatKoreaTime(member.joinedAt),
+                canRemove: member.role === 'OPERATOR',
               }))}
             />
           </div>
