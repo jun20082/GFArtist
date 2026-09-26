@@ -15,7 +15,7 @@ Google Forms 응답을 Google Sheets에서 가져와 검색하고, 현장 운영
 
 | 기능 | 내용 | 주요 파일 |
 |---|---|---|
-| 워크스페이스(파티) | 사용자별 소유, 사용자당 여러 소속 가능, 현재 워크스페이스 저장·전환 | `web/src/lib/workspace.ts`, `web/src/app/workspace-switcher.tsx` |
+| 워크스페이스(파티) | 설정 화면에서 이름으로 명시적 생성(사용자당 여러 개 소유 가능), 운영자로만 소속돼도 자기 워크스페이스 생성, 소속 전체 전환 | `web/src/lib/workspace.ts`, `web/src/app/settings/create-workspace-form.tsx`, `web/src/app/api/workspace/route.ts`, `web/src/app/workspace-switcher.tsx` |
 | 역할 | OWNER(설정·초대·동기화) / OPERATOR(조회·상태 변경) | `web/src/lib/workspace.ts` |
 | 초대 | 이메일 초대, 로그인 허용 판정, 로그인 시 멤버십 수락(멱등), 취소 | `web/src/lib/invites.ts`, `web/src/app/settings/invite-manager.tsx` |
 | 멤버 관리 | 목록, 제거(소속·초대·현재 워크스페이스 정리) | `web/src/lib/workspace-members.ts`, `web/src/app/settings/member-manager.tsx` |
@@ -175,6 +175,8 @@ web/src/lib/operating-status.ts              운영 상태 Sheet writer·재시�
 web/src/lib/responses.ts                     검색 쿼리
 web/src/app/about/page.tsx                   공개 소개 페이지 (OAuth 브랜딩용, 인증 없음)
 web/src/app/privacy/page.tsx                 공개 개인정보처리방침 (OAuth 브랜딩용, 인증 없음)
+web/src/app/api/workspace/route.ts           워크스페이스 생성 API (POST)
+web/src/app/settings/create-workspace-form.tsx  워크스페이스 생성 폼
 web/src/app/api/**                           API 라우트
 web/src/app/settings/**                      설정 화면 카드들
 web/prisma/schema.prisma                     데이터 모델
