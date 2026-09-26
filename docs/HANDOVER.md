@@ -20,11 +20,11 @@ Google Forms 응답을 Google Sheets에서 가져와 검색하고, 현장 운영
 | 초대 | 이메일 초대, 로그인 허용 판정, 로그인 시 멤버십 수락(멱등), 취소 | `web/src/lib/invites.ts`, `web/src/app/settings/invite-manager.tsx` |
 | 멤버 관리 | 목록, 제거(소속·초대·현재 워크스페이스 정리) | `web/src/lib/workspace-members.ts`, `web/src/app/settings/member-manager.tsx` |
 | 인증 | Auth.js v5 JWT 세션(7일), Google OAuth, 가입 개방(누구나 로그인 후 자기 워크스페이스 생성) + 로그인 시 초대 수락 | `web/src/auth.ts`, `web/src/lib/invites.ts` |
-| Sheets 연결 | URL/ID·탭 이름 저장, 권한·탭 검증, 워크스페이스당 설정 1행 | `web/src/lib/source-settings.ts` |
-| 컬럼 매핑 | 헤더 자동 인식(별칭), 직접 지정, 지정값이 없으면 저장 거부, 불일치 시 동기화 중단 | `web/src/lib/column-mapping.ts` |
+| Sheets 연결 | URL/ID·탭 드롭다운 저장, 권한·탭 검증, 추가 표시 컬럼 선택, 워크스페이스당 설정 1행 | `web/src/lib/source-settings.ts`, `web/src/app/api/source-settings/headers/route.ts` |
+| 컬럼 매핑 | 이름·전화번호 필수, 성별·주문 상품 선택, 시트 헤더 드롭다운 선택, 추가 표시 컬럼 다중 선택, 불일치 시 동기화 중단 | `web/src/lib/column-mapping.ts`, `web/src/app/settings/source-settings-form.tsx` |
 | 내부 ID | 서버가 동기화 시 `_internal_response_id` 컬럼 생성·기록 (Apps Script 제거됨) | `web/src/lib/response-id.ts`, `response-id-writer.ts`, `response-sync-run.ts` |
 | 응답 동기화 | 헤더/행 읽기 → ID 보완 → DB upsert, 워크스페이스 단위 advisory lock, 소유자 전용 | `web/src/app/api/sync/responses/route.ts`, `response-sync-run.ts` |
-| 검색·상세 | 이름(전체/부분/성 제외)·전화번호(정규화/뒷자리), 상태 필터 AND, 상세 조회 | `web/src/lib/responses.ts`, `web/src/app/search-client.tsx`, `web/src/app/responses/[id]/page.tsx` |
+| 검색·상세 | 이름(전체/부분/성 제외)·전화번호(정규화/뒷자리), 상태 필터 AND, 상세 조회(선택 추가 컬럼 표시) | `web/src/lib/responses.ts`, `web/src/app/search-client.tsx`, `web/src/app/responses/[id]/page.tsx` |
 | 운영 상태 동기화 | 상태 변경 시 DB 저장 후 `after()`로 응답 전송 뒤 Sheet 반영, 상태/오류 기록·재시도 | `web/src/lib/operating-status.ts`, `web/src/app/api/responses/[id]/route.ts` |
 | 중복 행 정리 | 중복 ID 탐지·병합·삭제, 중복 감지 시 동기화 중단 | `web/src/lib/duplicate-rows.ts`, `operating-status-duplicates.ts` |
 
@@ -41,12 +41,12 @@ Google Forms 응답을 Google Sheets에서 가져와 검색하고, 현장 운영
 - `Workspace` — `ownerUserId`, 멤버·초대·설정 관계
 - `WorkspaceMember` — `(workspaceId, userId)` unique, `role` OWNER/OPERATOR
 - `AccessInvite` — `(workspaceId, email)` unique, `status` INVITED/ACTIVE/REVOKED, `acceptedAt`
-- `SourceSettings` — `workspaceId` unique, 탭 이름, 컬럼 매핑 5개, `lastResponseSyncAt`
-- `Response` — `internalResponseId` unique, 카테고리·입장·상품, `statusSyncState`, `lastStatusSyncError`
+- `SourceSettings` — `workspaceId` unique, 탭 이름, 컬럼 매핑 5개, `displayColumns`(추가 표시 컬럼), `lastResponseSyncAt`
+- `Response` — `internalResponseId` unique, 카테고리·입장·상품, `extraFields`(선택 컬럼 값 JSON), `statusSyncState`, `lastStatusSyncError`
 - `SyncRun` — 응답 동기화 결과(건수·오류)
 - `Category` — 전역 3종(입금 안 함/입금 확인/문자 발송 완료)
 
-마이그레이션 6개(순서대로): `init`, `add_categories`, `add_workspaces`, `drop_apps_script_settings`, `add_current_workspace`, `add_access_invites`.
+마이그레이션 7개(순서대로): `init`, `add_categories`, `add_workspaces`, `drop_apps_script_settings`, `add_current_workspace`, `add_access_invites`, `add_display_columns`.
 
 ---
 
@@ -148,6 +148,7 @@ Remove-Item Env:\DATABASE_URL
 ## 7. 알려진 함정
 
 - **컬럼 추가 마이그레이션 누락 시 전면 500.** React #441(서버 컴포넌트 렌더 오류)로만 보여 원인 파악이 어렵다. `migrate status` 로 먼저 확인.
+- **`add_display_columns` 는 `SourceSettings.displayColumns`·`Response.extraFields` 를 추가한다.** 이 마이그레이션 없이 배포하면 설정/동기화/상세에서 500. 운영 적용 후 배포.
 - **운영 마이그레이션이 로컬에 적용되는 실수.** `DATABASE_URL` 미설정 또는 마스킹된 비밀번호(`******`)로 실행하면 `localhost:5432` 로 붙는다. 항상 `Datasource` 줄의 호스트를 확인.
 - **Neon 브랜치 혼동.** 콘솔에서 백업 브랜치가 선택된 상태로 URL을 복사하면 엉뚱한 브랜치에 적용된다. main 브랜치 선택을 확인.
 - **Docker Desktop 데몬이 자주 꺼진다.** 테스트가 갑자기 대량 실패하면 이것부터 확인.
@@ -176,7 +177,9 @@ web/src/lib/responses.ts                     검색 쿼리
 web/src/app/about/page.tsx                   공개 소개 페이지 (OAuth 브랜딩용, 인증 없음)
 web/src/app/privacy/page.tsx                 공개 개인정보처리방침 (OAuth 브랜딩용, 인증 없음)
 web/src/app/api/workspace/route.ts           워크스페이스 생성 API (POST)
+web/src/app/api/source-settings/headers/route.ts  시트 탭·헤더 조회 API (GET)
 web/src/app/settings/create-workspace-form.tsx  워크스페이스 생성 폼
+web/src/app/settings/source-settings-form.tsx   탭·컬럼 드롭다운 설정 폼
 web/src/app/api/**                           API 라우트
 web/src/app/settings/**                      설정 화면 카드들
 web/prisma/schema.prisma                     데이터 모델
