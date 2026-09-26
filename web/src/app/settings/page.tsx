@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { SourceSettingsForm } from '@/app/settings/source-settings-form';
 import { CreateWorkspaceForm } from '@/app/settings/create-workspace-form';
+import { WorkspaceMembershipActions } from '@/app/settings/workspace-membership-actions';
 import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
 import { CleanupDuplicatesButton } from '@/app/settings/cleanup-duplicates-button';
@@ -218,6 +219,14 @@ export default async function SettingsPage() {
                 joinedAt: formatKoreaTime(member.joinedAt),
                 canRemove: member.role === 'OPERATOR',
               }))}
+            />
+          </div>
+        ) : null}
+        {context ? (
+          <div className="mt-6">
+            <WorkspaceMembershipActions
+              role={context.role}
+              workspaceName={context.workspace.name}
             />
           </div>
         ) : null}
