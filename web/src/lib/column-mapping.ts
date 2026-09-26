@@ -126,3 +126,30 @@ export function assertMappingPresent(headers: string[], mapping: ColumnMapping) 
     );
   }
 }
+
+/** Columns the respondent fills in. The internal id column is created by the server. */
+export const respondentMappingKeys = [
+  'nameHeader',
+  'phoneHeader',
+  'genderHeader',
+  'orderedProductHeader',
+] as const;
+
+/**
+ * The internal id column may be absent because the server creates it. Every
+ * other mapped column must exist.
+ */
+export function assertRespondentMappingPresent(headers: string[], mapping: ColumnMapping) {
+  const normalizedHeaders = new Set(headers.map(normalize));
+  const missing = respondentMappingKeys.filter(
+    (key) => !normalizedHeaders.has(normalize(mapping[key])),
+  );
+
+  if (missing.length > 0) {
+    throw new ColumnMappingError(
+      `저장된 컬럼 매핑과 시트 헤더가 다릅니다: ${missing
+        .map((key) => `${columnMappingLabels[key]}(${mapping[key]})`)
+        .join(', ')}. Sheets 설정에서 연결을 다시 저장하세요.`,
+    );
+  }
+}

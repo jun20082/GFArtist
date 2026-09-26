@@ -26,6 +26,7 @@ export default async function SettingsPage() {
   const sourceSettings = context?.sourceSettings ?? null;
   const roleLabel = context ? workspaceRoleLabels[context.role] : null;
   const canEditSettings = !context || context.role === 'OWNER';
+  const canSync = context?.role === 'OWNER' && Boolean(sourceSettings);
   const pendingCount = sourceSettings
     ? await prisma.response.count({
         where: {
@@ -132,7 +133,17 @@ export default async function SettingsPage() {
           )}
         </div>
         <div className="mt-6">
-          <SyncResponsesButton />
+          {canSync ? (
+            <SyncResponsesButton />
+          ) : sourceSettings ? (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-slate-300">
+              <p className="font-medium text-white">응답 동기화는 소유자만 실행할 수 있습니다</p>
+              <p className="mt-2 leading-6">
+                동기화는 원본 응답 탭에 내부 ID를 기록하므로 워크스페이스 소유자만 실행할 수
+                있습니다. 필요하면 소유자에게 요청하세요.
+              </p>
+            </div>
+          ) : null}
         </div>
         <div className="mt-6">
           <RetryStatusSyncButton pendingCount={pendingCount} />

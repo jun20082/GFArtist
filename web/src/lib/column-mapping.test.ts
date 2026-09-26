@@ -2,6 +2,7 @@ import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   assertMappingPresent,
+  assertRespondentMappingPresent,
   ColumnMappingError,
   defaultColumnMapping,
   resolveColumnMapping,
@@ -122,6 +123,23 @@ describe('assertMappingPresent', () => {
 
     assert.throws(
       () => assertMappingPresent(headers, defaultColumnMapping),
+      /주문 상품\(주문 상품\)/,
+    );
+  });
+});
+
+describe('assertRespondentMappingPresent', () => {
+  test('내부 ID 컬럼이 없어도 통과한다 (서버가 생성)', () => {
+    const headers = ['이름', '전화번호', '성별', '주문 상품'];
+
+    assert.doesNotThrow(() => assertRespondentMappingPresent(headers, defaultColumnMapping));
+  });
+
+  test('응답 컬럼이 사라지면 안내 오류를 던진다', () => {
+    const headers = ['이름', '전화번호', '성별'];
+
+    assert.throws(
+      () => assertRespondentMappingPresent(headers, defaultColumnMapping),
       /주문 상품\(주문 상품\)/,
     );
   });

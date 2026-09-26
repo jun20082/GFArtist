@@ -15,7 +15,11 @@ export function SyncResponsesButton() {
     setIsSyncing(true);
 
     const response = await fetch('/api/sync/responses', { method: 'POST' });
-    const result = (await response.json()) as { error?: string; processedCount?: number };
+    const result = (await response.json()) as {
+      error?: string;
+      processedCount?: number;
+      generatedCount?: number;
+    };
     setIsSyncing(false);
 
     if (!response.ok) {
@@ -23,7 +27,12 @@ export function SyncResponsesButton() {
       return;
     }
 
-    setMessage(`동기화 완료: ${result.processedCount ?? 0}건 반영`);
+    const generated = result.generatedCount ?? 0;
+    setMessage(
+      generated > 0
+        ? `동기화 완료: ${result.processedCount ?? 0}건 반영 · 신규 내부 ID ${generated}건 생성`
+        : `동기화 완료: ${result.processedCount ?? 0}건 반영`,
+    );
     router.refresh();
   }
 
@@ -31,8 +40,8 @@ export function SyncResponsesButton() {
     <div className="space-y-3 rounded-3xl border border-white/10 bg-white/5 p-6">
       <h2 className="text-lg font-semibold">응답 동기화</h2>
       <p className="text-sm leading-6 text-slate-300">
-        원본 응답 탭에서 ID가 누락된 행을 보완하고, 응답 내용을 데이터베이스에 반영합니다.
-        기존 카테고리와 입장·상품 상태는 유지됩니다.
+        원본 응답 탭에서 ID가 누락된 행에 내부 ID를 생성하고, 응답 내용을 데이터베이스에
+        반영합니다. 기존 카테고리와 입장·상품 상태는 유지됩니다.
       </p>
       <button
         className="w-full rounded-xl bg-sky-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-50"
