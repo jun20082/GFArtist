@@ -1,6 +1,6 @@
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { saveSourceSettings, toPublicSourceSettings, type ValidatedSourceSettings } from './source-settings';
+import { missingTabMessage, saveSourceSettings, toPublicSourceSettings, type ValidatedSourceSettings } from './source-settings';
 import { defaultColumnMapping } from './column-mapping';
 import {
   addWorkspaceMember,
@@ -44,6 +44,27 @@ async function resetWithUsers(...userIds: string[]) {
     await createUser(userId);
   }
 }
+
+describe('missingTabMessage', () => {
+  test('탭 이름 확인 안내와 사용 가능한 탭 목록을 포함한다', () => {
+    const message = missingTabMessage('Response sheet tab not found', '설문지 응답', [
+      '설문지 응답 시트1',
+      '운영 상태',
+    ]);
+
+    assert.match(message, /Response sheet tab not found: 설문지 응답/);
+    assert.match(message, /탭 이름을 확인해 주세요/);
+    assert.match(message, /사용 가능한 탭: 설문지 응답 시트1, 운영 상태/);
+  });
+
+  test('탭이 하나도 없으면 (없음)으로 표시한다', () => {
+    const message = missingTabMessage('Operating status tab not found', '운영 상태', []);
+
+    assert.match(message, /Operating status tab not found: 운영 상태/);
+    assert.match(message, /탭 이름을 확인해 주세요/);
+    assert.match(message, /사용 가능한 탭: \(없음\)/);
+  });
+});
 
 describe('saveSourceSettings', () => {
   test('처음 저장하면 워크스페이스와 설정을 함께 만든다', async () => {

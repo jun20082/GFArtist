@@ -20,6 +20,12 @@ export const sourceSettingsInput = z.object({
   internalResponseIdHeader: z.string().trim().optional(),
 });
 
+export function missingTabMessage(label: string, tabName: string, availableTabs: string[]) {
+  const tabs = availableTabs.length > 0 ? availableTabs.join(', ') : '(없음)';
+
+  return `${label}: ${tabName}. 탭 이름을 확인해 주세요. 사용 가능한 탭: ${tabs}`;
+}
+
 export async function validateSourceSettings(
   userId: string,
   input: z.infer<typeof sourceSettingsInput>,
@@ -39,11 +45,23 @@ export async function validateSourceSettings(
   );
 
   if (!sheetNames.has(input.responseSheetName)) {
-    throw new Error(`Response sheet tab not found: ${input.responseSheetName}`);
+    throw new Error(
+      missingTabMessage(
+        'Response sheet tab not found',
+        input.responseSheetName,
+        [...sheetNames],
+      ),
+    );
   }
 
   if (!sheetNames.has(input.operatingStatusSheetName)) {
-    throw new Error(`Operating status tab not found: ${input.operatingStatusSheetName}`);
+    throw new Error(
+      missingTabMessage(
+        'Operating status tab not found',
+        input.operatingStatusSheetName,
+        [...sheetNames],
+      ),
+    );
   }
 
   const headerResponse = await sheets.spreadsheets.values.get({
