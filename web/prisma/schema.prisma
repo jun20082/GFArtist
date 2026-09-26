@@ -35,6 +35,12 @@ enum WorkspaceRole {
   OPERATOR
 }
 
+enum InviteStatus {
+  INVITED
+  ACTIVE
+  REVOKED
+}
+
 model User {
   id                 String            @id @default(cuid())
   name               String?
@@ -47,6 +53,7 @@ model User {
   ownedWorkspaces    Workspace[]       @relation("WorkspaceOwner")
   currentWorkspace   Workspace?        @relation("CurrentWorkspace", fields: [currentWorkspaceId], references: [id], onDelete: SetNull)
   workspaceMembers   WorkspaceMember[]
+  sentInvites        AccessInvite[]    @relation("InvitedBy")
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 }
@@ -60,7 +67,24 @@ model Workspace {
   owner           User              @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
   currentForUsers User[]            @relation("CurrentWorkspace")
   members         WorkspaceMember[]
+  invites         AccessInvite[]
   sourceSettings  SourceSettings?
+}
+
+model AccessInvite {
+  id              String        @id @default(cuid())
+  email           String
+  workspaceId     String
+  role            WorkspaceRole @default(OPERATOR)
+  status          InviteStatus  @default(INVITED)
+  invitedByUserId String
+  createdAt       DateTime      @default(now())
+  acceptedAt      DateTime?
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy       User          @relation("InvitedBy", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([workspaceId, email])
+  @@index([email])
 }
 
 model WorkspaceMember {
