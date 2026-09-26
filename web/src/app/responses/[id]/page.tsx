@@ -7,6 +7,17 @@ import { ResponseActions } from '@/app/responses/[id]/response-actions';
 
 export const dynamic = 'force-dynamic';
 
+function extraFieldRows(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.entries(value as Record<string, unknown>).map(([label, raw]) => ({
+    label,
+    value: raw === null || raw === undefined ? '' : String(raw),
+  }));
+}
+
 export default async function ResponseDetailPage({
   params,
 }: {
@@ -34,8 +45,9 @@ export default async function ResponseDetailPage({
   const rows = [
     { label: '이름', value: response.name },
     { label: '전화번호', value: response.phoneRaw },
-    { label: '성별', value: response.gender },
-    { label: '주문 상품', value: response.orderedProduct },
+    ...(response.gender ? [{ label: '성별', value: response.gender }] : []),
+    ...(response.orderedProduct ? [{ label: '주문 상품', value: response.orderedProduct }] : []),
+    ...extraFieldRows(response.extraFields),
   ];
 
   const syncStateLabels: Record<string, string> = {
