@@ -65,7 +65,12 @@ function doPost(event) {
     verifyWebAppSecret_(payload.secret);
 
     if (payload.action === 'ensure_ids') {
-      return jsonResponse_({ ok: true, ...ensureInternalResponseIds_() });
+      const requestedSheetName =
+        typeof payload.sheetName === 'string' && payload.sheetName.trim()
+          ? payload.sheetName.trim()
+          : null;
+
+      return jsonResponse_({ ok: true, ...ensureInternalResponseIds_(requestedSheetName) });
     }
 
     throw new Error(`Unsupported action: ${payload.action || '(missing)'}`);
@@ -78,8 +83,8 @@ function doGet() {
   return jsonResponse_({ ok: true, service: 'response-id-script' });
 }
 
-function ensureInternalResponseIds_() {
-  const sheet = getConfiguredResponseSheet_();
+function ensureInternalResponseIds_(requestedSheetName) {
+  const sheet = getConfiguredResponseSheet_(requestedSheetName);
   const idColumn = ensureResponseHeaders_(sheet);
   protectInternalIdColumn_(sheet, idColumn);
   const lastRow = sheet.getLastRow();
@@ -158,10 +163,11 @@ function installFormSubmitTrigger_(spreadsheet) {
   }
 }
 
-function getConfiguredResponseSheet_() {
+function getConfiguredResponseSheet_(requestedSheetName) {
   const properties = PropertiesService.getScriptProperties();
   const spreadsheetId = properties.getProperty(SOURCE_SPREADSHEET_ID_PROPERTY);
-  const sheetName = properties.getProperty(RESPONSE_SHEET_NAME_PROPERTY);
+  const sheetName =
+    requestedSheetName || properties.getProperty(RESPONSE_SHEET_NAME_PROPERTY);
 
   if (!spreadsheetId || !sheetName) {
     throw new Error('The source spreadsheet has not been configured.');

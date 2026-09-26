@@ -109,6 +109,7 @@ export { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
 type AppsScriptConfig = {
   appsScriptUrl?: string | null;
   appsScriptSecretEncrypted?: string | null;
+  responseSheetName: string;
 };
 
 /**
@@ -154,7 +155,11 @@ export async function ensureAppsScriptIds(sourceSettings: AppsScriptConfig) {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ action: 'ensure_ids', secret }),
+    body: JSON.stringify({
+      action: 'ensure_ids',
+      secret,
+      sheetName: sourceSettings.responseSheetName,
+    }),
     signal: AbortSignal.timeout(15_000),
   });
 

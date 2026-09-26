@@ -6,12 +6,20 @@ import { columnMappingLabels, type ColumnMapping } from '@/lib/column-mapping';
 type SourceSettingsFormProps = {
   appsScriptUrl: string | null;
   hasAppsScriptSecret: boolean;
+  partyName: string | null;
+  spreadsheetId: string | null;
+  responseSheetName: string | null;
+  operatingStatusSheetName: string | null;
   columnMapping: ColumnMapping | null;
 };
 
 type SourceSettingsResponse = {
   error?: string;
   sourceSettings?: {
+    partyName: string;
+    spreadsheetId: string;
+    responseSheetName: string;
+    operatingStatusSheetName: string;
     nameHeader: string;
     phoneHeader: string;
     genderHeader: string;
@@ -29,6 +37,9 @@ const mappingFieldNames: (keyof ColumnMapping)[] = [
   'internalResponseIdHeader',
 ];
 
+const inputClassName =
+  'mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300';
+
 function emptyMapping(): Record<keyof ColumnMapping, string> {
   return {
     nameHeader: '',
@@ -42,16 +53,26 @@ function emptyMapping(): Record<keyof ColumnMapping, string> {
 export function SourceSettingsForm({
   appsScriptUrl,
   hasAppsScriptSecret,
+  partyName,
+  spreadsheetId,
+  responseSheetName,
+  operatingStatusSheetName,
   columnMapping,
 }: SourceSettingsFormProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [secretStored, setSecretStored] = useState(hasAppsScriptSecret);
+  const [partyNameValue, setPartyNameValue] = useState(partyName ?? '');
+  const [spreadsheetValue, setSpreadsheetValue] = useState(spreadsheetId ?? '');
+  const [responseSheetValue, setResponseSheetValue] = useState(
+    responseSheetName ?? '설문지 응답',
+  );
+  const [operatingStatusSheetValue, setOperatingStatusSheetValue] = useState(
+    operatingStatusSheetName ?? '운영 상태',
+  );
   const [mapping, setMapping] = useState<Record<keyof ColumnMapping, string>>(
-    columnMapping
-      ? { ...columnMapping }
-      : emptyMapping(),
+    columnMapping ? { ...columnMapping } : emptyMapping(),
   );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -63,26 +84,30 @@ export function SourceSettingsForm({
     const formData = new FormData(event.currentTarget);
     const appsScriptSecret = formData.get('appsScriptSecret');
 
+    const body: Record<string, string> = {
+      partyName: partyNameValue,
+      spreadsheetUrlOrId: spreadsheetValue,
+      responseSheetName: responseSheetValue,
+      operatingStatusSheetName: operatingStatusSheetValue,
+      appsScriptUrl: String(formData.get('appsScriptUrl') ?? ''),
+    };
+
+    for (const name of mappingFieldNames) {
+      const value = mapping[name].trim();
+
+      if (value) {
+        body[name] = value;
+      }
+    }
+
+    if (appsScriptSecret) {
+      body.appsScriptSecret = String(appsScriptSecret);
+    }
+
     const response = await fetch('/api/source-settings', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        partyName: formData.get('partyName'),
-        spreadsheetUrlOrId: formData.get('spreadsheetUrlOrId'),
-        responseSheetName: formData.get('responseSheetName'),
-        operatingStatusSheetName: formData.get('operatingStatusSheetName'),
-        appsScriptUrl: formData.get('appsScriptUrl'),
-        ...mappingFieldNames.reduce<Record<string, string>>((accumulator, name) => {
-          const value = mapping[name].trim();
-
-          if (value) {
-            accumulator[name] = value;
-          }
-
-          return accumulator;
-        }, {}),
-        ...(appsScriptSecret ? { appsScriptSecret } : {}),
-      }),
+      body: JSON.stringify(body),
     });
 
     const result = (await response.json()) as SourceSettingsResponse;
@@ -94,6 +119,10 @@ export function SourceSettingsForm({
     }
 
     if (result.sourceSettings) {
+      setPartyNameValue(result.sourceSettings.partyName);
+      setSpreadsheetValue(result.sourceSettings.spreadsheetId);
+      setResponseSheetValue(result.sourceSettings.responseSheetName);
+      setOperatingStatusSheetValue(result.sourceSettings.operatingStatusSheetName);
       setMapping({
         nameHeader: result.sourceSettings.nameHeader,
         phoneHeader: result.sourceSettings.phoneHeader,
@@ -115,40 +144,46 @@ export function SourceSettingsForm({
       <label className="block text-sm text-slate-200">
         파티명
         <input
-          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+          className={inputClassName}
           name="partyName"
+          onChange={(event) => setPartyNameValue(event.target.value)}
           placeholder="조커이즈 할로윈 파티"
           required
+          value={partyNameValue}
         />
       </label>
 
       <label className="block text-sm text-slate-200">
         Google Sheets URL 또는 ID
         <input
-          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+          className={inputClassName}
           name="spreadsheetUrlOrId"
+          onChange={(event) => setSpreadsheetValue(event.target.value)}
           placeholder="https://docs.google.com/spreadsheets/d/..."
           required
+          value={spreadsheetValue}
         />
       </label>
 
       <label className="block text-sm text-slate-200">
         원본 응답 탭 이름
         <input
-          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
-          defaultValue="설문지 응답"
+          className={inputClassName}
           name="responseSheetName"
+          onChange={(event) => setResponseSheetValue(event.target.value)}
           required
+          value={responseSheetValue}
         />
       </label>
 
       <label className="block text-sm text-slate-200">
         운영 상태 탭 이름
         <input
-          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
-          defaultValue="운영 상태"
+          className={inputClassName}
           name="operatingStatusSheetName"
+          onChange={(event) => setOperatingStatusSheetValue(event.target.value)}
           required
+          value={operatingStatusSheetValue}
         />
       </label>
 
@@ -163,7 +198,7 @@ export function SourceSettingsForm({
           <label className="block text-sm text-slate-200" key={name}>
             {columnMappingLabels[name]}
             <input
-              className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+              className={inputClassName}
               name={name}
               onChange={(event) =>
                 setMapping((current) => ({ ...current, [name]: event.target.value }))
@@ -184,7 +219,7 @@ export function SourceSettingsForm({
         <label className="block text-sm text-slate-200">
           Apps Script Web App URL
           <input
-            className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+            className={inputClassName}
             defaultValue={appsScriptUrl ?? ''}
             name="appsScriptUrl"
             placeholder="https://script.google.com/macros/s/.../exec"
@@ -199,7 +234,7 @@ export function SourceSettingsForm({
           </span>
           <input
             autoComplete="off"
-            className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300"
+            className={inputClassName}
             name="appsScriptSecret"
             placeholder="Web App과 공유한 Secret"
             type="password"

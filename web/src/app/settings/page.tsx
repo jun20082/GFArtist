@@ -83,6 +83,10 @@ export default async function SettingsPage() {
           <SourceSettingsForm
             appsScriptUrl={sourceSettings?.appsScriptUrl ?? null}
             hasAppsScriptSecret={Boolean(sourceSettings?.appsScriptSecretEncrypted)}
+            partyName={sourceSettings?.partyName ?? null}
+            responseSheetName={sourceSettings?.responseSheetName ?? null}
+            spreadsheetId={sourceSettings?.spreadsheetId ?? null}
+            operatingStatusSheetName={sourceSettings?.operatingStatusSheetName ?? null}
             columnMapping={
               sourceSettings
                 ? {
