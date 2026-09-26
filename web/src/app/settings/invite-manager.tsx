@@ -87,6 +87,11 @@ export function InviteManager({ invites }: { invites: InviteItem[] }) {
           워크스페이스의 운영자로 참여합니다. 초대된 운영자도 상태 변경을 위해 스프레드시트 편집
           권한이 필요합니다.
         </p>
+        <p className="mt-2 text-xs leading-5 text-amber-300/90">
+          Google Cloud OAuth 동의 화면이 &quot;테스트&quot; 상태이면 그 계정이 테스트 사용자로도
+          등록되어 있어야 로그인할 수 있습니다. 외부 사용자를 제한 없이 받으려면 앱 게시(검증)가
+          필요합니다.
+        </p>
       </div>
 
       <form className="flex flex-col gap-2 sm:flex-row" onSubmit={handleInvite}>
