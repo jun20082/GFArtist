@@ -149,6 +149,7 @@ model SourceSettings {
   genderHeader             String     @default("성별")
   orderedProductHeader     String     @default("주문 상품")
   internalResponseIdHeader String     @default("_internal_response_id")
+  displayColumns           String[]   @default([])
   lastResponseSyncAt       DateTime?
   createdAt                DateTime   @default(now())
   updatedAt                DateTime   @updatedAt
@@ -166,6 +167,7 @@ model Response {
   phoneNormalized     String
   gender              String
   orderedProduct      String
+  extraFields         Json?
   categoryCode        CategoryCode    @default(UNPAID)
   entryStatus         EntryStatus     @default(NOT_ENTERED)
   productStatus       ProductStatus   @default(NOT_RECEIVED)

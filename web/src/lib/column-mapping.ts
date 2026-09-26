@@ -34,13 +34,23 @@ export const columnAliases: Record<keyof ColumnMapping, readonly string[]> = {
   internalResponseIdHeader: ['_internal_response_id'],
 };
 
-const mappingKeys = Object.keys(defaultColumnMapping) as (keyof ColumnMapping)[];
+/** Name and phone drive search and operating status, so they must exist. */
+const requiredMappingKeys = ['nameHeader', 'phoneHeader'] as const;
 
-/**
- * The internal id column is created by the server during sync, so it must not
- * be required to exist in the sheet when the connection is saved.
- */
-const requiredAtConnectKeys = mappingKeys.filter((key) => key !== 'internalResponseIdHeader');
+/** Gender and product are optional; a sheet without them resolves to ''. */
+const optionalMappingKeys = ['genderHeader', 'orderedProductHeader'] as const;
+
+const connectMappingKeys: (keyof ColumnMapping)[] = [
+  ...requiredMappingKeys,
+  ...optionalMappingKeys,
+];
+
+function isRequiredMappingKey(key: keyof ColumnMapping) {
+  return requiredMappingKeys.includes(key as (typeof requiredMappingKeys)[number]);
+}
+
+/** Sentinel for an optional column the user chose to leave unmapped. */
+export const unmappedColumnValue = '__none__';
 
 export class ColumnMappingError extends Error {
   constructor(message: string) {
@@ -67,10 +77,15 @@ export function resolveColumnMapping(
   const unknown: string[] = [];
   const missing: string[] = [];
 
-  for (const key of requiredAtConnectKeys) {
+  for (const key of connectMappingKeys) {
     const preferredValue = preferred[key]?.trim();
 
     if (preferredValue) {
+      if (preferredValue === unmappedColumnValue && !isRequiredMappingKey(key)) {
+        resolved[key] = '';
+        continue;
+      }
+
       const matched = normalizedHeaders.get(normalize(preferredValue));
 
       if (matched) {
@@ -91,7 +106,11 @@ export function resolveColumnMapping(
       continue;
     }
 
-    missing.push(columnMappingLabels[key]);
+    if (isRequiredMappingKey(key)) {
+      missing.push(columnMappingLabels[key]);
+    } else {
+      resolved[key] = '';
+    }
   }
 
   const preferredId = preferred.internalResponseIdHeader?.trim();
@@ -125,23 +144,6 @@ export function resolveColumnMapping(
   return resolved;
 }
 
-/**
- * Verifies the stored mapping still matches the sheet. A renamed or removed
- * column must fail the sync instead of writing the wrong data.
- */
-export function assertMappingPresent(headers: string[], mapping: ColumnMapping) {
-  const normalizedHeaders = new Set(headers.map(normalize));
-  const missing = mappingKeys.filter((key) => !normalizedHeaders.has(normalize(mapping[key])));
-
-  if (missing.length > 0) {
-    throw new ColumnMappingError(
-      `저장된 컬럼 매핑과 시트 헤더가 다릅니다: ${missing
-        .map((key) => `${columnMappingLabels[key]}(${mapping[key]})`)
-        .join(', ')}. Sheets 설정에서 연결을 다시 저장하세요.`,
-    );
-  }
-}
-
 /** Columns the respondent fills in. The internal id column is created by the server. */
 export const respondentMappingKeys = [
   'nameHeader',
@@ -151,20 +153,89 @@ export const respondentMappingKeys = [
 ] as const;
 
 /**
- * The internal id column may be absent because the server creates it. Every
- * other mapped column must exist.
+ * Resolves the extra columns the user selected to store and display. Every
+ * selected header must still exist, and the original header casing is kept.
+ */
+export function resolveDisplayColumns(headers: string[], preferred: readonly string[] = []) {
+  const normalizedHeaders = new Map(headers.map((header) => [normalize(header), header]));
+  const resolved: string[] = [];
+  const unknown: string[] = [];
+
+  for (const name of preferred) {
+    const trimmed = name.trim();
+
+    if (!trimmed) {
+      continue;
+    }
+
+    const matched = normalizedHeaders.get(normalize(trimmed));
+
+    if (!matched) {
+      unknown.push(trimmed);
+      continue;
+    }
+
+    if (!resolved.includes(matched)) {
+      resolved.push(matched);
+    }
+  }
+
+  if (unknown.length > 0) {
+    throw new ColumnMappingError(
+      `표시할 컬럼을 시트에서 찾지 못했습니다: ${unknown.join(', ')}. 시트 헤더: ${
+        headers.filter(Boolean).join(', ') || '(없음)'
+      }`,
+    );
+  }
+
+  return resolved;
+}
+
+/**
+ * Verifies the stored respondent mapping still matches the sheet. Name and
+ * phone must exist; gender and product are only checked when mapped. The
+ * internal id column may be absent because the server creates it.
  */
 export function assertRespondentMappingPresent(headers: string[], mapping: ColumnMapping) {
   const normalizedHeaders = new Set(headers.map(normalize));
-  const missing = respondentMappingKeys.filter(
-    (key) => !normalizedHeaders.has(normalize(mapping[key])),
-  );
+  const missing: string[] = [];
+
+  for (const key of requiredMappingKeys) {
+    if (!normalizedHeaders.has(normalize(mapping[key]))) {
+      missing.push(`${columnMappingLabels[key]}(${mapping[key]})`);
+    }
+  }
+
+  for (const key of optionalMappingKeys) {
+    const value = mapping[key];
+
+    if (value && !normalizedHeaders.has(normalize(value))) {
+      missing.push(`${columnMappingLabels[key]}(${value})`);
+    }
+  }
 
   if (missing.length > 0) {
     throw new ColumnMappingError(
-      `저장된 컬럼 매핑과 시트 헤더가 다릅니다: ${missing
-        .map((key) => `${columnMappingLabels[key]}(${mapping[key]})`)
-        .join(', ')}. Sheets 설정에서 연결을 다시 저장하세요.`,
+      `저장된 컬럼 매핑과 시트 헤더가 다릅니다: ${missing.join(
+        ', ',
+      )}. Sheets 설정에서 연결을 다시 저장하세요.`,
+    );
+  }
+}
+
+/** Every stored display column must still exist in the sheet. */
+export function assertDisplayColumnsPresent(
+  headers: string[],
+  displayColumns: readonly string[],
+) {
+  const normalizedHeaders = new Set(headers.map(normalize));
+  const missing = displayColumns.filter((header) => !normalizedHeaders.has(normalize(header)));
+
+  if (missing.length > 0) {
+    throw new ColumnMappingError(
+      `저장된 표시 컬럼이 시트에 없습니다: ${missing.join(
+        ', ',
+      )}. Sheets 설정에서 연결을 다시 저장하세요.`,
     );
   }
 }

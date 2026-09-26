@@ -22,6 +22,7 @@ function buildRow(overrides: Partial<ResponseRow> = {}): ResponseRow {
     phoneRaw: '010-1111-2222',
     gender: '여성',
     orderedProduct: '상품A',
+    extraFields: {},
     sourceRowNumber: 2,
     ...overrides,
   };
@@ -40,6 +41,19 @@ describe('applyResponseRows 응답 동기화', () => {
     assert.equal(saved.name, '동기화 대상');
     assert.equal(saved.phoneNormalized, '01011112222');
     assert.equal(saved.sourceSettingsId, settings.id);
+  });
+
+  test('추가 표시 컬럼 값을 저장한다', async () => {
+    const settings = await setup();
+
+    await applyResponseRows(settings.id, [
+      buildRow({ extraFields: { 비고: '선물', 타임스탬프: '2026-09-27' } }),
+    ]);
+
+    const saved = await prisma.response.findUniqueOrThrow({
+      where: { internalResponseId: 'resp_sync_1' },
+    });
+    assert.deepEqual(saved.extraFields, { 비고: '선물', 타임스탬프: '2026-09-27' });
   });
 
   test('같은 내부 ID는 행을 늘리지 않고 원본 필드만 갱신한다', async () => {

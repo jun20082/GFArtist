@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import type { SourceSettings } from '@/generated/prisma/client';
 import { parseSpreadsheetId, quoteSheetName } from '@/lib/sheet-format';
 import { getWorkspaceContext } from '@/lib/workspace';
-import { resolveColumnMapping } from '@/lib/column-mapping';
+import { resolveColumnMapping, resolveDisplayColumns } from '@/lib/column-mapping';
 
 export const sourceSettingsInput = z.object({
   partyName: z.string().trim().min(1).max(120),
@@ -15,6 +15,7 @@ export const sourceSettingsInput = z.object({
   genderHeader: z.string().trim().optional(),
   orderedProductHeader: z.string().trim().optional(),
   internalResponseIdHeader: z.string().trim().optional(),
+  displayColumns: z.array(z.string().trim().min(1)).optional(),
 });
 
 export function missingTabMessage(label: string, tabName: string, availableTabs: string[]) {
@@ -73,8 +74,9 @@ export async function validateSourceSettings(
     orderedProductHeader: input.orderedProductHeader,
     internalResponseIdHeader: input.internalResponseIdHeader,
   });
+  const displayColumns = resolveDisplayColumns(headers, input.displayColumns ?? []);
 
-  return { ...input, spreadsheetId, mapping };
+  return { ...input, spreadsheetId, mapping, displayColumns };
 }
 
 const SETTINGS_CACHE_TTL_MS = 5_000;
@@ -152,6 +154,7 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
       spreadsheetId: input.spreadsheetId,
       responseSheetName: input.responseSheetName,
       operatingStatusSheetName: input.operatingStatusSheetName,
+      displayColumns: input.displayColumns,
       ...mapping,
     },
     update: {
@@ -159,6 +162,7 @@ export async function saveSourceSettings(userId: string, input: ValidatedSourceS
       spreadsheetId: input.spreadsheetId,
       responseSheetName: input.responseSheetName,
       operatingStatusSheetName: input.operatingStatusSheetName,
+      displayColumns: input.displayColumns,
       ...mapping,
     },
   });

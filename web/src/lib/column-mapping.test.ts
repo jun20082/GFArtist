@@ -1,11 +1,12 @@
 import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  assertMappingPresent,
+  assertDisplayColumnsPresent,
   assertRespondentMappingPresent,
   ColumnMappingError,
   defaultColumnMapping,
   resolveColumnMapping,
+  resolveDisplayColumns,
 } from './column-mapping';
 
 describe('resolveColumnMapping', () => {
@@ -80,7 +81,7 @@ describe('resolveColumnMapping', () => {
       (error: unknown) =>
         error instanceof ColumnMappingError &&
         /지정한 컬럼을 시트에서 찾지 못했습니다: 이름\(name\)/.test(error.message) &&
-        /다음 항목의 컬럼을 찾지 못했습니다: 전화번호, 성별, 주문 상품/.test(error.message),
+        /다음 항목의 컬럼을 찾지 못했습니다: 전화번호/.test(error.message),
     );
   });
 
@@ -98,17 +99,30 @@ describe('resolveColumnMapping', () => {
     });
   });
 
-  test('찾지 못한 항목을 모두 알려준다', () => {
+  test('필수 컬럼(이름·전화번호) 중 없는 것만 알려준다', () => {
     const headers = ['이름', '비고'];
 
     assert.throws(
       () => resolveColumnMapping(headers),
       (error: unknown) =>
         error instanceof ColumnMappingError &&
-        /전화번호, 성별, 주문 상품/.test(error.message) &&
+        /다음 항목의 컬럼을 찾지 못했습니다: 전화번호\./.test(error.message) &&
+        !/성별/.test(error.message) &&
         !/내부 ID/.test(error.message) &&
         /시트 헤더: 이름, 비고/.test(error.message),
     );
+  });
+
+  test('성별·주문 상품 컬럼이 없으면 빈 값으로 둔다', () => {
+    const headers = ['이름', '전화번호'];
+
+    assert.deepEqual(resolveColumnMapping(headers), {
+      nameHeader: '이름',
+      phoneHeader: '전화번호',
+      genderHeader: '',
+      orderedProductHeader: '',
+      internalResponseIdHeader: '_internal_response_id',
+    });
   });
 
   test('내부 ID 컬럼이 없어도 서버가 만들 것이므로 통과한다', () => {
@@ -126,19 +140,41 @@ describe('resolveColumnMapping', () => {
   });
 });
 
-describe('assertMappingPresent', () => {
-  test('매핑이 그대로면 통과한다', () => {
-    const headers = ['이름', '전화번호', '성별', '주문 상품', '_internal_response_id'];
+describe('resolveDisplayColumns', () => {
+  test('선택한 컬럼을 시트의 원본 표기로 돌려준다', () => {
+    const headers = ['타임스탬프', '이름', '비고'];
 
-    assert.doesNotThrow(() => assertMappingPresent(headers, defaultColumnMapping));
+    assert.deepEqual(resolveDisplayColumns(headers, ['비고', '타임스탬프']), ['비고', '타임스탬프']);
   });
 
-  test('컬럼이 사라지면 안내 오류를 던진다', () => {
-    const headers = ['이름', '전화번호', '성별', '_internal_response_id'];
+  test('대소문자·공백을 무시하고 중복을 제거한다', () => {
+    const headers = ['Timestamp', 'Memo'];
 
+    assert.deepEqual(resolveDisplayColumns(headers, [' timestamp ', 'MEMO', 'memo']), [
+      'Timestamp',
+      'Memo',
+    ]);
+  });
+
+  test('없는 컬럼을 지정하면 거부한다', () => {
     assert.throws(
-      () => assertMappingPresent(headers, defaultColumnMapping),
-      /주문 상품\(주문 상품\)/,
+      () => resolveDisplayColumns(['이름'], ['비고']),
+      /표시할 컬럼을 시트에서 찾지 못했습니다: 비고/,
+    );
+  });
+});
+
+describe('assertDisplayColumnsPresent', () => {
+  test('모두 있으면 통과한다', () => {
+    assert.doesNotThrow(() =>
+      assertDisplayColumnsPresent(['이름', '비고'], ['비고']),
+    );
+  });
+
+  test('사라진 표시 컬럼을 알린다', () => {
+    assert.throws(
+      () => assertDisplayColumnsPresent(['이름'], ['비고']),
+      /저장된 표시 컬럼이 시트에 없습니다: 비고/,
     );
   });
 });

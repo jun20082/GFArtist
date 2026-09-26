@@ -24,6 +24,7 @@ function buildSettings(
     responseSheetName: '설문지 응답',
     operatingStatusSheetName: '운영 상태',
     mapping: defaultColumnMapping,
+    displayColumns: [],
     ...overrides,
   };
 }

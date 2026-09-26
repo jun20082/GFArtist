@@ -8,6 +8,7 @@ export type ResponseRow = {
   phoneRaw: string;
   gender: string;
   orderedProduct: string;
+  extraFields: Record<string, string>;
   sourceRowNumber: number;
 };
 
@@ -39,6 +40,7 @@ export async function applyResponseRowsInDb(
         phoneNormalized,
         gender: row.gender,
         orderedProduct: row.orderedProduct,
+        extraFields: row.extraFields,
         sourceRowNumber: row.sourceRowNumber,
         lastResponseSyncAt: syncedAt,
       },
@@ -49,6 +51,7 @@ export async function applyResponseRowsInDb(
         phoneNormalized,
         gender: row.gender,
         orderedProduct: row.orderedProduct,
+        extraFields: row.extraFields,
         sourceRowNumber: row.sourceRowNumber,
         lastResponseSyncAt: syncedAt,
       },

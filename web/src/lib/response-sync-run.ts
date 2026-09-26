@@ -1,5 +1,9 @@
 import type { SourceSettings } from '@/generated/prisma/client';
-import { assertRespondentMappingPresent, type ColumnMapping } from '@/lib/column-mapping';
+import {
+  assertDisplayColumnsPresent,
+  assertRespondentMappingPresent,
+  type ColumnMapping,
+} from '@/lib/column-mapping';
 import { quoteSheetName } from '@/lib/sheet-format';
 import { planInternalIds } from '@/lib/response-id';
 import { writeInternalIds, type InternalIdSheetsClient } from '@/lib/response-id-writer';
@@ -92,6 +96,7 @@ export async function runResponseSync(
       const indexes = new Map(headers.map((header, index) => [header, index]));
 
       assertRespondentMappingPresent(headers, mapping);
+      assertDisplayColumnsPresent(headers, sourceSettings.displayColumns);
 
       const plan = planInternalIds({
         headers,
@@ -112,6 +117,8 @@ export async function runResponseSync(
         sheets,
       );
 
+      const displayColumns = sourceSettings.displayColumns;
+
       const responseRows: ResponseRow[] = dataRows
         .map((row, index) => ({
           internalResponseId: plan.columnValues[index] ?? '',
@@ -119,6 +126,9 @@ export async function runResponseSync(
           phoneRaw: asText(row[indexes.get(mapping.phoneHeader) ?? -1]),
           gender: asText(row[indexes.get(mapping.genderHeader) ?? -1]),
           orderedProduct: asText(row[indexes.get(mapping.orderedProductHeader) ?? -1]),
+          extraFields: Object.fromEntries(
+            displayColumns.map((header) => [header, asText(row[indexes.get(header) ?? -1])]),
+          ),
           sourceRowNumber: index + 2,
         }))
         .filter((row) => row.internalResponseId && (row.name || row.phoneRaw));
