@@ -18,6 +18,22 @@ function formatKoreaTime(value: Date) {
   return value.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
 }
 
+/**
+ * The invite list must not take down the whole settings screen when the
+ * database is behind (for example a missing migration). The message stays
+ * visible instead of a blank error page.
+ */
+async function loadInvites(workspaceId: string) {
+  try {
+    return { invites: await listWorkspaceInvites(workspaceId), error: null as string | null };
+  } catch (error) {
+    return {
+      invites: [] as Awaited<ReturnType<typeof listWorkspaceInvites>>,
+      error: error instanceof Error ? error.message : '초대 목록을 불러오지 못했습니다.',
+    };
+  }
+}
+
 export default async function SettingsPage() {
   const session = await auth();
 
@@ -45,8 +61,10 @@ export default async function SettingsPage() {
         orderBy: { startedAt: 'desc' },
       })
     : null;
-  const invites =
-    context?.role === 'OWNER' ? await listWorkspaceInvites(context.workspace.id) : [];
+  const inviteResult =
+    context?.role === 'OWNER'
+      ? await loadInvites(context.workspace.id)
+      : { invites: [] as Awaited<ReturnType<typeof listWorkspaceInvites>>, error: null };
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
@@ -158,10 +176,18 @@ export default async function SettingsPage() {
         <div className="mt-6">
           <CleanupDuplicatesButton />
         </div>
-        {context?.role === 'OWNER' ? (
+        {inviteResult.error ? (
+          <div className="mt-6 rounded-3xl border border-rose-300/30 bg-rose-300/5 p-6 text-sm text-rose-200">
+            <p className="font-medium">초대 정보를 불러오지 못했습니다</p>
+            <p className="mt-2 leading-6">{inviteResult.error}</p>
+            <p className="mt-2 text-rose-300/80">
+              데이터베이스 마이그레이션이 운영 환경에 적용되었는지 확인하세요.
+            </p>
+          </div>
+        ) : context?.role === 'OWNER' ? (
           <div className="mt-6">
             <InviteManager
-              invites={invites.map((invite) => ({
+              invites={inviteResult.invites.map((invite) => ({
                 id: invite.id,
                 email: invite.email,
                 status: invite.status,
