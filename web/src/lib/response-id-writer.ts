@@ -85,7 +85,9 @@ export async function writeInternalIds(
   const runs = groupRowRuns(plan.generatedIndexes);
 
   for (const run of runs) {
-    const values = [plan.columnValues.slice(run.start, run.end + 1)];
+    const values = plan.columnValues
+      .slice(run.start, run.end + 1)
+      .map((value) => [value]);
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: target.spreadsheetId,

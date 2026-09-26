@@ -118,7 +118,7 @@ describe('writeInternalIds', () => {
     assert.equal(result.updatedRanges, 1);
     assert.equal(calls.length, 1);
     assert.equal(calls[0].range, `'설문지 응답'!C2:C4`);
-    assert.deepEqual(calls[0].values, [['resp_gen_1', 'resp_gen_2', 'resp_gen_3']]);
+    assert.deepEqual(calls[0].values, [['resp_gen_1'], ['resp_gen_2'], ['resp_gen_3']]);
   });
 
   test('빈 행은 값도 쓰지 않는다', async () => {
