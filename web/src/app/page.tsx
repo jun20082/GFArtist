@@ -2,8 +2,9 @@ import { auth, signOut } from '@/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { searchResponses } from '@/lib/responses';
-import { getWorkspaceContext, workspaceRoleLabels } from '@/lib/workspace';
+import { getWorkspaceContext, getWorkspaceMemberships, workspaceRoleLabels } from '@/lib/workspace';
 import { SearchClient } from '@/app/search-client';
+import { WorkspaceSwitcher } from '@/app/workspace-switcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export default async function Home({
 
   const params = await searchParams;
   const context = await getWorkspaceContext(session.user.id);
+  const memberships = await getWorkspaceMemberships(session.user.id);
   const sourceSettings = context?.sourceSettings ?? null;
   const responses = sourceSettings
     ? await searchResponses(sourceSettings.id, {
@@ -57,7 +59,8 @@ export default async function Home({
             <h1 className="mt-2 text-2xl font-semibold">응답자 검색</h1>
             <p className="mt-2 text-sm text-slate-400">{subtitle}</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-4">
+            <WorkspaceSwitcher memberships={memberships} />
             <Link className="text-sm text-emerald-300 hover:text-emerald-200" href="/settings">
               Sheets 설정
             </Link>

@@ -5,7 +5,8 @@ import { SourceSettingsForm } from '@/app/settings/source-settings-form';
 import { SyncResponsesButton } from '@/app/settings/sync-responses-button';
 import { RetryStatusSyncButton } from '@/app/settings/retry-status-sync-button';
 import { CleanupDuplicatesButton } from '@/app/settings/cleanup-duplicates-button';
-import { getWorkspaceContext, workspaceRoleLabels } from '@/lib/workspace';
+import { getWorkspaceContext, getWorkspaceMemberships, workspaceRoleLabels } from '@/lib/workspace';
+import { WorkspaceSwitcher } from '@/app/workspace-switcher';
 import { StatusSyncState } from '@/generated/prisma/enums';
 import { prisma } from '@/lib/prisma';
 
@@ -23,6 +24,7 @@ export default async function SettingsPage() {
   }
 
   const context = await getWorkspaceContext(session.user.id);
+  const memberships = await getWorkspaceMemberships(session.user.id);
   const sourceSettings = context?.sourceSettings ?? null;
   const roleLabel = context ? workspaceRoleLabels[context.role] : null;
   const canEditSettings = !context || context.role === 'OWNER';
@@ -55,9 +57,12 @@ export default async function SettingsPage() {
               원본 응답 탭과 같은 Spreadsheet의 운영 상태 탭을 연결합니다.
             </p>
           </div>
-          <Link className="text-sm text-emerald-300 hover:text-emerald-200" href="/">
-            응답자 검색
-          </Link>
+          <div className="flex flex-col items-end gap-2">
+            <Link className="text-sm text-emerald-300 hover:text-emerald-200" href="/">
+              응답자 검색
+            </Link>
+            <WorkspaceSwitcher memberships={memberships} />
+          </div>
         </div>
         {context ? (
           <dl className="mt-6 space-y-1 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">

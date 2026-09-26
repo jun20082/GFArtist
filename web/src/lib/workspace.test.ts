@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {
   getResponseForMember,
   getWorkspaceContext,
+  getWorkspaceMemberships,
   isWorkspaceMember,
   isWorkspaceOwner,
+  setCurrentWorkspace,
 } from './workspace';
 import { getWorkspaceSourceSettings } from './source-settings';
 import { retryPendingStatusSync, type OperatingStatusWriter } from './operating-status';
@@ -81,8 +83,7 @@ describe('워크스페이스 격리', () => {
     assert.equal(denied, null);
   });
 
-  test('재시도는 자기 워크스페이스의 대기 건만 처리한다', async () => {
-    await setup();
+  test('재시도는 자기 워크스페이스의 대기 건만 처리한다', async () => {    await setup();
     const first = await createSourceSettings({ userId: 'user-1', partyName: 'A 파티' });
     const second = await createSourceSettings({ userId: 'user-2', partyName: 'B 파티' });
     const firstResponse = await createResponse(first.id, { name: 'A 응답자', phoneRaw: '010-1111' });
@@ -105,6 +106,80 @@ describe('워크스페이스 격리', () => {
 
     const touched = await prisma.response.findUniqueOrThrow({ where: { id: firstResponse.id } });
     assert.equal(touched.statusSyncState, 'SYNCED');
+  });
+});
+
+describe('워크스페이스 전환', () => {
+  test('저장된 현재 워크스페이스가 없으면 가장 오래된 소속을 쓰고 기억한다', async () => {
+    await setup();
+    const first = await createSourceSettings({ userId: 'user-1', partyName: 'A 파티' });
+    await createSourceSettings({ userId: 'user-1', partyName: 'B 파티' });
+
+    const context = await getWorkspaceContext('user-1');
+    assert.equal(context?.workspace.id, first.workspaceId);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: 'user-1' } });
+    assert.equal(user.currentWorkspaceId, first.workspaceId);
+  });
+
+  test('전환하면 그 워크스페이스의 설정을 사용한다', async () => {
+    await setup();
+    const first = await createSourceSettings({ userId: 'user-1', partyName: 'A 파티' });
+    const second = await createSourceSettings({ userId: 'user-1', partyName: 'B 파티' });
+
+    await setCurrentWorkspace('user-1', second.workspaceId as string);
+
+    const context = await getWorkspaceContext('user-1');
+    assert.equal(context?.workspace.id, second.workspaceId);
+    assert.equal(await getWorkspaceSourceSettings('user-1').then((row) => row?.id), second.id);
+    assert.notEqual(first.id, second.id);
+  });
+
+  test('현재 워크스페이스 소속이 사라지면 다른 소속으로 자동 보정한다', async () => {
+    await setup();
+    const first = await createSourceSettings({ userId: 'user-1', partyName: 'A 파티' });
+    const second = await createSourceSettings({ userId: 'user-1', partyName: 'B 파티' });
+
+    await setCurrentWorkspace('user-1', second.workspaceId as string);
+    await prisma.workspaceMember.deleteMany({
+      where: { userId: 'user-1', workspaceId: second.workspaceId as string },
+    });
+
+    const context = await getWorkspaceContext('user-1');
+    assert.equal(context?.workspace.id, first.workspaceId);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: 'user-1' } });
+    assert.equal(user.currentWorkspaceId, first.workspaceId);
+    assert.notEqual(first.workspaceId, second.workspaceId);
+  });
+
+  test('멤버가 아닌 워크스페이스로는 전환할 수 없다', async () => {
+    await setup();
+    await createSourceSettings({ userId: 'user-1', partyName: 'A 파티' });
+    const other = await createSourceSettings({ userId: 'user-2', partyName: 'B 파티' });
+
+    await assert.rejects(
+      () => setCurrentWorkspace('user-1', other.workspaceId as string),
+      /멤버가 아닙니다/,
+    );
+  });
+
+  test('소속 목록에 현재 워크스페이스 표시가 포함된다', async () => {
+    await setup();
+    await createSourceSettings({ userId: 'user-1', partyName: 'A 파티' });
+    const second = await createSourceSettings({ userId: 'user-1', partyName: 'B 파티' });
+
+    await setCurrentWorkspace('user-1', second.workspaceId as string);
+
+    const memberships = await getWorkspaceMemberships('user-1');
+    assert.equal(memberships.length, 2);
+    assert.deepEqual(
+      memberships.map((membership) => [membership.name, membership.isCurrent]),
+      [
+        ['A 파티', false],
+        ['B 파티', true],
+      ],
+    );
   });
 });
 

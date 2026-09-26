@@ -8,24 +8,35 @@ export type WorkspaceContext = {
   sourceSettings: SourceSettings | null;
 };
 
-export const workspaceRoleLabels: Record<WorkspaceRole, string> = {
-  OWNER: '소유자',
-  OPERATOR: '운영자',
-};
+export { workspaceRoleLabels } from '@/lib/workspace-labels';
 
 /**
- * A user currently belongs to a single workspace. If several memberships exist
- * one day, the oldest one stays the default.
+ * Resolves the workspace the user is currently working in. The stored
+ * currentWorkspaceId wins when the user is still a member; otherwise the oldest
+ * membership is used and remembered so the choice stays stable.
  */
 export async function getWorkspaceContext(userId: string): Promise<WorkspaceContext | null> {
-  const membership = await prisma.workspaceMember.findFirst({
+  const memberships = await prisma.workspaceMember.findMany({
     where: { userId },
     orderBy: { createdAt: 'asc' },
-    include: { workspace: { include: { sourceSettings: true } } },
+    include: {
+      user: { select: { currentWorkspaceId: true } },
+      workspace: { include: { sourceSettings: true } },
+    },
   });
 
-  if (!membership) {
+  if (memberships.length === 0) {
     return null;
+  }
+
+  const currentWorkspaceId = memberships[0].user.currentWorkspaceId;
+  const membership =
+    memberships.find((row) => row.workspaceId === currentWorkspaceId) ?? memberships[0];
+
+  if (membership.workspaceId !== currentWorkspaceId) {
+    await prisma.user
+      .update({ where: { id: userId }, data: { currentWorkspaceId: membership.workspaceId } })
+      .catch(() => undefined);
   }
 
   return {
@@ -33,6 +44,51 @@ export async function getWorkspaceContext(userId: string): Promise<WorkspaceCont
     role: membership.role,
     sourceSettings: membership.workspace.sourceSettings,
   };
+}
+
+export type WorkspaceMembership = {
+  workspaceId: string;
+  name: string;
+  role: WorkspaceRole;
+  isCurrent: boolean;
+};
+
+/** Memberships for the workspace switcher, oldest first. */
+export async function getWorkspaceMemberships(userId: string): Promise<WorkspaceMembership[]> {
+  const memberships = await prisma.workspaceMember.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      user: { select: { currentWorkspaceId: true } },
+      workspace: { select: { id: true, name: true } },
+    },
+  });
+  const currentWorkspaceId = memberships[0]?.user.currentWorkspaceId ?? null;
+
+  return memberships.map((membership, index) => ({
+    workspaceId: membership.workspaceId,
+    name: membership.workspace.name,
+    role: membership.role,
+    isCurrent:
+      membership.workspaceId === currentWorkspaceId ||
+      (index === 0 && !memberships.some((row) => row.workspaceId === currentWorkspaceId)),
+  }));
+}
+
+export async function setCurrentWorkspace(userId: string, workspaceId: string) {
+  const membership = await prisma.workspaceMember.findFirst({
+    where: { userId, workspaceId },
+    select: { id: true },
+  });
+
+  if (!membership) {
+    throw new Error('이 워크스페이스의 멤버가 아닙니다.');
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { currentWorkspaceId: workspaceId },
+  });
 }
 
 export async function isWorkspaceMember(userId: string, workspaceId: string | null) {
@@ -69,16 +125,26 @@ export async function ensureOwnedWorkspace(userId: string, name: string) {
   });
 
   if (existing) {
+    await prisma.user
+      .update({ where: { id: userId }, data: { currentWorkspaceId: existing.workspaceId } })
+      .catch(() => undefined);
+
     return existing.workspace;
   }
 
-  return prisma.workspace.create({
+  const created = await prisma.workspace.create({
     data: {
       name,
       ownerUserId: userId,
       members: { create: { userId, role: 'OWNER' } },
     },
   });
+
+  await prisma.user
+    .update({ where: { id: userId }, data: { currentWorkspaceId: created.id } })
+    .catch(() => undefined);
+
+  return created;
 }
 
 /**
