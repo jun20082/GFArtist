@@ -159,7 +159,6 @@ export function SearchClient({
                 style={{ backgroundColor: response.category.color }}
               />
               <span className="font-medium">{response.name}</span>
-              <span className="text-xs text-slate-400">{response.category.name}</span>
               <span className="ml-auto flex items-center gap-2">
                 <span
                   className={`rounded-md px-2 py-1 text-xs ${
