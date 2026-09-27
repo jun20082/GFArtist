@@ -154,7 +154,7 @@ export function SearchClient({
               }, ${response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'}, ${
                 response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'
               }`}
-              className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-6 transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               href={`/responses/${response.id}`}
             >
               <div className="flex min-w-0 items-center gap-2">
@@ -163,7 +163,7 @@ export function SearchClient({
                   className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: response.category.color }}
                 />
-                <span className="truncate font-medium">{response.name}</span>
+                <span className="truncate text-lg font-medium">{response.name}</span>
               </div>
 
               <dl className="space-y-1 text-sm text-slate-300">
