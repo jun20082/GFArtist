@@ -12,6 +12,8 @@ type Category = {
 type Response = {
   id: string;
   name: string;
+  phoneRaw: string;
+  orderedProduct: string;
   entryStatus: string;
   productStatus: string;
   category: Category;
@@ -143,23 +145,41 @@ export function SearchClient({
         </p>
       ) : null}
 
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {responses.map((response) => (
-          <li key={response.id}>
+          <li className="min-w-0" key={response.id}>
             <Link
-              aria-label={`${response.name}, ${response.category.name}, ${
-                response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'
-              }, ${response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'}`}
-              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              aria-label={`${response.name}, ${response.phoneRaw}, ${response.orderedProduct}, ${
+                response.category.name
+              }, ${response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'}, ${
+                response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'
+              }`}
+              className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               href={`/responses/${response.id}`}
             >
-              <span
-                aria-hidden="true"
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: response.category.color }}
-              />
-              <span className="font-medium">{response.name}</span>
-              <span className="ml-auto flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="h-3 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: response.category.color }}
+                />
+                <span className="truncate font-medium">{response.name}</span>
+              </div>
+
+              <dl className="space-y-1 text-sm text-slate-300">
+                <div className="flex justify-between gap-3">
+                  <dt className="shrink-0 text-slate-400">전화번호</dt>
+                  <dd className="min-w-0 break-words text-right">{response.phoneRaw || '-'}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="shrink-0 text-slate-400">주문 상품</dt>
+                  <dd className="min-w-0 break-words text-right">
+                    {response.orderedProduct || '-'}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="mt-auto flex flex-wrap items-center gap-2">
                 <span
                   className={`rounded-md px-2 py-1 text-xs ${
                     response.entryStatus === 'ENTERED'
@@ -178,7 +198,7 @@ export function SearchClient({
                 >
                   {response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'}
                 </span>
-              </span>
+              </div>
             </Link>
           </li>
         ))}

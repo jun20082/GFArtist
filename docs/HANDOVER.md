@@ -25,7 +25,7 @@ Google Forms 응답을 Google Sheets에서 가져와 검색하고, 현장 운영
 | 컬럼 매핑 | 이름·전화번호 필수, 성별·주문 상품 선택, 시트 헤더 드롭다운 선택, 추가 표시 컬럼 다중 선택, 불일치 시 동기화 중단 | `web/src/lib/column-mapping.ts`, `web/src/app/settings/source-settings-form.tsx` |
 | 내부 ID | 서버가 동기화 시 `_internal_response_id` 컬럼 생성·기록 (Apps Script 제거됨) | `web/src/lib/response-id.ts`, `response-id-writer.ts`, `response-sync-run.ts` |
 | 응답 동기화 | 헤더/행 읽기 → ID 보완 → DB upsert, 워크스페이스 단위 advisory lock, 소유자 전용 | `web/src/app/api/sync/responses/route.ts`, `response-sync-run.ts` |
-| 검색·상세 | 이름(전체/부분/성 제외)·전화번호(정규화/뒷자리), 상태 필터 AND, 상세 조회(선택 추가 컬럼 표시) | `web/src/lib/responses.ts`, `web/src/app/search-client.tsx`, `web/src/app/responses/[id]/page.tsx` |
+| 검색·상세 | 이름·전화번호(정규화/뒷자리)·상태 필터 AND, 결과 카드 3열 그리드(이름·전화번호·주문 상품·상태), 상세 조회(선택 추가 컬럼 표시) | `web/src/lib/responses.ts`, `web/src/app/search-client.tsx`, `web/src/app/responses/[id]/page.tsx` |
 | 운영 상태 동기화 | 상태 변경 시 DB 저장 후 `after()`로 응답 전송 뒤 Sheet 반영, 상태/오류 기록·재시도 | `web/src/lib/operating-status.ts`, `web/src/app/api/responses/[id]/route.ts` |
 | 중복 행 정리 | 중복 ID 탐지·병합·삭제, 중복 감지 시 동기화 중단 | `web/src/lib/duplicate-rows.ts`, `operating-status-duplicates.ts` |
 
