@@ -75,14 +75,16 @@ export function SearchClient({
   return (
     <>
       <form
+        autoComplete="off"
         className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5"
         onSubmit={handleSubmit}
       >
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
             aria-label="이름 또는 전화번호 검색"
+            autoComplete="off"
             className="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/40"
-            name="q"
+            enterKeyHint="search"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="이름 또는 전화번호 (뒷자리 가능)"
             type="text"
