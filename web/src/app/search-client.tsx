@@ -257,7 +257,7 @@ export function SearchClient({
                 <div className="mt-auto flex flex-wrap items-center gap-2">
                   <button
                     aria-pressed={response.entryStatus === 'ENTERED'}
-                    className={`pointer-events-auto min-h-11 min-w-24 whitespace-nowrap text-center rounded-md px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
+                    className={`pointer-events-auto h-10 w-[5.4rem] whitespace-nowrap text-center rounded-md px-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
                       response.entryStatus === 'ENTERED'
                         ? 'bg-emerald-300/20 text-emerald-200 hover:bg-emerald-300/30'
                         : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30'
@@ -275,7 +275,7 @@ export function SearchClient({
                   </button>
                   <button
                     aria-pressed={response.productStatus === 'RECEIVED'}
-                    className={`pointer-events-auto min-h-11 min-w-24 whitespace-nowrap text-center rounded-md px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
+                    className={`pointer-events-auto h-10 w-[5.4rem] whitespace-nowrap text-center rounded-md px-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
                       response.productStatus === 'RECEIVED'
                         ? 'bg-sky-300/20 text-sky-200 hover:bg-sky-300/30'
                         : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30'
