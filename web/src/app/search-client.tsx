@@ -49,6 +49,60 @@ export function SearchClient({
   const [product, setProduct] = useState(initialProduct);
   const [responses, setResponses] = useState<Response[]>(initialResponses);
   const [error, setError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [savingIds, setSavingIds] = useState<string[]>([]);
+
+  async function updateStatus(
+    id: string,
+    patch: { entryStatus?: string; productStatus?: string },
+  ) {
+    const previous = responses;
+
+    setStatusError(null);
+    setStatusNotice(null);
+    setSavingIds((ids) => [...ids, id]);
+    setResponses((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+
+    try {
+      const response = await fetch(`/api/responses/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        syncError?: string | null;
+        response?: { entryStatus: string; productStatus: string };
+      };
+
+      if (!response.ok) {
+        setResponses(previous);
+        setStatusError(result.error ?? '상태 변경에 실패했습니다.');
+        return;
+      }
+
+      if (result.response) {
+        const saved = result.response;
+        setResponses((rows) =>
+          rows.map((row) =>
+            row.id === id
+              ? { ...row, entryStatus: saved.entryStatus, productStatus: saved.productStatus }
+              : row,
+          ),
+        );
+      }
+
+      if (result.syncError) {
+        setStatusNotice(`저장됨. 운영 상태 탭 반영 실패: ${result.syncError}`);
+      }
+    } catch {
+      setResponses(previous);
+      setStatusError('상태 변경에 실패했습니다. 네트워크를 확인하세요.');
+    } finally {
+      setSavingIds((ids) => ids.filter((value) => value !== id));
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -141,6 +195,17 @@ export function SearchClient({
         </p>
       ) : null}
 
+      {statusError ? (
+        <p className="mt-3 text-sm text-rose-300" role="alert">
+          {statusError}
+        </p>
+      ) : null}
+      {statusNotice ? (
+        <p aria-live="polite" className="mt-3 text-sm text-amber-300" role="status">
+          {statusNotice}
+        </p>
+      ) : null}
+
       {responses.length === 0 ? (
         <p className="mt-3 rounded-xl border border-white/10 bg-white/5 px-4 py-6 text-sm text-slate-400">
           조건에 맞는 응답자가 없습니다. 이름이나 전화번호 뒷자리를 다시 확인하세요.
@@ -148,62 +213,89 @@ export function SearchClient({
       ) : null}
 
       <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {responses.map((response) => (
-          <li className="min-w-0" key={response.id}>
-            <Link
-              aria-label={`${response.name}, ${response.phoneRaw}, ${response.orderedProduct}, ${
-                response.category.name
-              }, ${response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'}, ${
-                response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'
-              }`}
-              className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-6 transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-              href={`/responses/${response.id}`}
+        {responses.map((response) => {
+          const isSaving = savingIds.includes(response.id);
+
+          return (
+            <li
+              className="relative min-w-0 rounded-2xl border border-white/10 bg-white/5 transition hover:border-white/30 focus-within:border-white/30"
+              key={response.id}
             >
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className="h-3 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: response.category.color }}
-                />
-                <span className="truncate text-lg font-medium">{response.name}</span>
-              </div>
+              <Link
+                aria-label={`${response.name}, ${response.phoneRaw}, ${response.orderedProduct}, ${
+                  response.category.name
+                }, ${response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'}, ${
+                  response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'
+                }`}
+                className="absolute inset-0 z-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                href={`/responses/${response.id}`}
+              />
 
-              <dl className="space-y-1 text-sm text-slate-300">
-                <div className="flex justify-between gap-3">
-                  <dt className="shrink-0 text-slate-400">전화번호</dt>
-                  <dd className="min-w-0 break-words text-right">{response.phoneRaw || '-'}</dd>
+              <div className="pointer-events-none relative z-10 flex h-full flex-col gap-3 px-4 py-6">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: response.category.color }}
+                  />
+                  <span className="truncate text-lg font-medium">{response.name}</span>
                 </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="shrink-0 text-slate-400">주문 상품</dt>
-                  <dd className="min-w-0 break-words text-right">
-                    {response.orderedProduct || '-'}
-                  </dd>
-                </div>
-              </dl>
 
-              <div className="mt-auto flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded-md px-2 py-1 text-xs ${
-                    response.entryStatus === 'ENTERED'
-                      ? 'bg-emerald-300/20 text-emerald-200'
-                      : 'bg-slate-500/20 text-slate-300'
-                  }`}
-                >
-                  {response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'}
-                </span>
-                <span
-                  className={`rounded-md px-2 py-1 text-xs ${
-                    response.productStatus === 'RECEIVED'
-                      ? 'bg-sky-300/20 text-sky-200'
-                      : 'bg-slate-500/20 text-slate-300'
-                  }`}
-                >
-                  {response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'}
-                </span>
+                <dl className="space-y-1 text-sm text-slate-300">
+                  <div className="flex justify-between gap-3">
+                    <dt className="shrink-0 text-slate-400">전화번호</dt>
+                    <dd className="min-w-0 break-words text-right">{response.phoneRaw || '-'}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="shrink-0 text-slate-400">주문 상품</dt>
+                    <dd className="min-w-0 break-words text-right">
+                      {response.orderedProduct || '-'}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="mt-auto flex flex-wrap items-center gap-2">
+                  <button
+                    aria-pressed={response.entryStatus === 'ENTERED'}
+                    className={`pointer-events-auto min-h-11 rounded-md px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
+                      response.entryStatus === 'ENTERED'
+                        ? 'bg-emerald-300/20 text-emerald-200 hover:bg-emerald-300/30'
+                        : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30'
+                    }`}
+                    disabled={isSaving}
+                    onClick={() =>
+                      updateStatus(response.id, {
+                        entryStatus:
+                          response.entryStatus === 'ENTERED' ? 'NOT_ENTERED' : 'ENTERED',
+                      })
+                    }
+                    type="button"
+                  >
+                    {response.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'}
+                  </button>
+                  <button
+                    aria-pressed={response.productStatus === 'RECEIVED'}
+                    className={`pointer-events-auto min-h-11 rounded-md px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
+                      response.productStatus === 'RECEIVED'
+                        ? 'bg-sky-300/20 text-sky-200 hover:bg-sky-300/30'
+                        : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30'
+                    }`}
+                    disabled={isSaving}
+                    onClick={() =>
+                      updateStatus(response.id, {
+                        productStatus:
+                          response.productStatus === 'RECEIVED' ? 'NOT_RECEIVED' : 'RECEIVED',
+                      })
+                    }
+                    type="button"
+                  >
+                    {response.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'}
+                  </button>
+                </div>
               </div>
-            </Link>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </>
   );
