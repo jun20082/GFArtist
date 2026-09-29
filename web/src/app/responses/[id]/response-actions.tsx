@@ -104,66 +104,47 @@ export function ResponseActions({
         </div>
       </div>
 
-      <div>
-        <p className="text-sm text-slate-400">입장 여부</p>
-        <div className="mt-2 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-slate-400">입장 여부</span>
           <button
             aria-pressed={selected.entryStatus === 'ENTERED'}
-            className={`min-h-11 rounded-xl border px-5 py-2 text-sm transition disabled:opacity-50 ${
+            className={`min-h-11 rounded-md px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
               selected.entryStatus === 'ENTERED'
-                ? 'border-emerald-300 bg-emerald-300/10'
-                : 'border-white/15 hover:border-white/40'
+                ? 'bg-emerald-300/20 text-emerald-200 hover:bg-emerald-300/30'
+                : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30'
             }`}
-            disabled={isSaving || selected.entryStatus === 'ENTERED'}
-            onClick={() => update({ entryStatus: 'ENTERED' })}
+            disabled={isSaving}
+            onClick={() =>
+              update({
+                entryStatus: selected.entryStatus === 'ENTERED' ? 'NOT_ENTERED' : 'ENTERED',
+              })
+            }
             type="button"
           >
-            입장 완료
-          </button>
-          <button
-            aria-pressed={selected.entryStatus === 'NOT_ENTERED'}
-            className={`min-h-11 rounded-xl border px-5 py-2 text-sm transition disabled:opacity-50 ${
-              selected.entryStatus === 'NOT_ENTERED'
-                ? 'border-emerald-300 bg-emerald-300/10'
-                : 'border-white/15 hover:border-white/40'
-            }`}
-            disabled={isSaving || selected.entryStatus === 'NOT_ENTERED'}
-            onClick={() => update({ entryStatus: 'NOT_ENTERED' })}
-            type="button"
-          >
-            미입장
+            {selected.entryStatus === 'ENTERED' ? '입장 완료' : '미입장'}
           </button>
         </div>
-      </div>
 
-      <div>
-        <p className="text-sm text-slate-400">상품 수령 여부</p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-slate-400">상품 수령 여부</span>
           <button
             aria-pressed={selected.productStatus === 'RECEIVED'}
-            className={`min-h-11 rounded-xl border px-5 py-2 text-sm transition disabled:opacity-50 ${
+            className={`min-h-11 rounded-md px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
               selected.productStatus === 'RECEIVED'
-                ? 'border-sky-300 bg-sky-300/10'
-                : 'border-white/15 hover:border-white/40'
+                ? 'bg-sky-300/20 text-sky-200 hover:bg-sky-300/30'
+                : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30'
             }`}
-            disabled={isSaving || selected.productStatus === 'RECEIVED'}
-            onClick={() => update({ productStatus: 'RECEIVED' })}
+            disabled={isSaving}
+            onClick={() =>
+              update({
+                productStatus:
+                  selected.productStatus === 'RECEIVED' ? 'NOT_RECEIVED' : 'RECEIVED',
+              })
+            }
             type="button"
           >
-            수령 완료
-          </button>
-          <button
-            aria-pressed={selected.productStatus === 'NOT_RECEIVED'}
-            className={`min-h-11 rounded-xl border px-5 py-2 text-sm transition disabled:opacity-50 ${
-              selected.productStatus === 'NOT_RECEIVED'
-                ? 'border-sky-300 bg-sky-300/10'
-                : 'border-white/15 hover:border-white/40'
-            }`}
-            disabled={isSaving || selected.productStatus === 'NOT_RECEIVED'}
-            onClick={() => update({ productStatus: 'NOT_RECEIVED' })}
-            type="button"
-          >
-            미수령
+            {selected.productStatus === 'RECEIVED' ? '수령 완료' : '미수령'}
           </button>
         </div>
       </div>
