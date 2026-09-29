@@ -109,7 +109,7 @@ export function ResponseActions({
           <span className="text-xs text-slate-400">입장 여부</span>
           <button
             aria-pressed={selected.entryStatus === 'ENTERED'}
-            className={`min-h-11 rounded-md px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
+            className={`min-w-24 whitespace-nowrap text-center min-h-11 rounded-md px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
               selected.entryStatus === 'ENTERED'
                 ? 'bg-emerald-300/20 text-emerald-200 hover:bg-emerald-300/30'
                 : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30'
@@ -130,7 +130,7 @@ export function ResponseActions({
           <span className="text-xs text-slate-400">상품 수령 여부</span>
           <button
             aria-pressed={selected.productStatus === 'RECEIVED'}
-            className={`min-h-11 rounded-md px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
+            className={`min-w-24 whitespace-nowrap text-center min-h-11 rounded-md px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 ${
               selected.productStatus === 'RECEIVED'
                 ? 'bg-sky-300/20 text-sky-200 hover:bg-sky-300/30'
                 : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30'
