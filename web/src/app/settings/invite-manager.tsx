@@ -114,7 +114,7 @@ export function InviteManager({ invites }: { invites: InviteItem[] }) {
         <ul className="space-y-1 rounded-xl border border-white/10 bg-slate-900/60 p-3 text-xs text-slate-300">
           {invites.map((invite) => (
             <li className="flex items-center justify-between gap-3" key={invite.id}>
-              <span>
+              <span className="min-w-0 flex-1 break-all">
                 {invite.email} · {statusLabels[invite.status] ?? invite.status}
                 {invite.acceptedAt ? ` · ${invite.acceptedAt}` : ''}
               </span>

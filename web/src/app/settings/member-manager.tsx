@@ -59,7 +59,7 @@ export function MemberManager({ members }: { members: MemberItem[] }) {
       <ul className="space-y-1 rounded-xl border border-white/10 bg-slate-900/60 p-3 text-xs text-slate-300">
         {members.map((member) => (
           <li className="flex items-center justify-between gap-3" key={member.userId}>
-            <span>
+            <span className="min-w-0 flex-1 break-all">
               {member.label} · {member.role} · {member.joinedAt}
             </span>
             {member.canRemove ? (

@@ -63,14 +63,16 @@ export default async function ResponseDetailPage({
           목록으로
         </Link>
 
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <span
             aria-hidden="true"
-            className="h-4 w-4 rounded-full"
+            className="h-4 w-4 shrink-0 rounded-full"
             style={{ backgroundColor: response.category.color }}
           />
           <h1 className="min-w-0 break-words text-2xl font-semibold">{response.name}</h1>
-          <span className="text-sm text-slate-400">{response.category.name}</span>
+          <span className="min-w-0 break-words text-sm text-slate-400">
+            {response.category.name}
+          </span>
         </div>
 
         <dl className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-sm">
@@ -83,15 +85,17 @@ export default async function ResponseDetailPage({
             </div>
           ))}
           <div className="flex justify-between gap-4">
-            <dt className="text-slate-400">상태 동기화</dt>
-            <dd className="text-right text-slate-100">
+            <dt className="shrink-0 text-slate-400">상태 동기화</dt>
+            <dd className="min-w-0 break-words text-right text-slate-100">
               {syncStateLabels[response.statusSyncState] ?? response.statusSyncState}
             </dd>
           </div>
           {response.lastStatusSyncError ? (
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-400">동기화 오류</dt>
-              <dd className="text-right text-rose-300">{response.lastStatusSyncError}</dd>
+              <dt className="shrink-0 text-slate-400">동기화 오류</dt>
+              <dd className="min-w-0 break-words text-right text-rose-300">
+                {response.lastStatusSyncError}
+              </dd>
             </div>
           ) : null}
           {response.statusSyncState === 'FAILED' ? (
